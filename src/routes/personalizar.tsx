@@ -35,6 +35,8 @@ type Spec = {
 
 // Medidas aproximadas reales (relación de aspecto y módulo de cámara) por modelo
 const MODEL_SPECS: Record<string, Spec> = {
+  "iPhone 18 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 90, camRatio: "2.28 / 1", camTop: 2.8 },
+  "iPhone 18 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 90, camRatio: "2.2 / 1", camTop: 2.8 },
   "iPhone 17 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 90, camRatio: "2.28 / 1", camTop: 2.8 },
   "iPhone 17 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 90, camRatio: "2.2 / 1", camTop: 2.8 },
   "iPhone 17 Air": { ratio: "74.7 / 156.2", radius: 13, cam: "wide", camW: 88, camRatio: "2.55 / 1", camTop: 3 },
