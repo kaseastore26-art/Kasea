@@ -3,6 +3,8 @@ export type PhoneBrand = (typeof PHONE_BRANDS)[number];
 
 export const PHONE_MODELS: Record<PhoneBrand, string[]> = {
   iPhone: [
+    "iPhone 18 Pro Max",
+    "iPhone 18 Pro",
     "iPhone 17 Pro Max",
     "iPhone 17 Pro",
     "iPhone 17 Air",
