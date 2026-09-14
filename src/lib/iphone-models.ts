@@ -1,4 +1,6 @@
 export const IPHONE_MODELS = [
+  "iPhone 18 Pro Max",
+  "iPhone 18 Pro",
   "iPhone 17 Pro Max",
   "iPhone 17 Pro",
   "iPhone 17 Air",
