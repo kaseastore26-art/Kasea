@@ -24,6 +24,7 @@ function AdminAjustes() {
   });
 
   const [flat, setFlat] = useState("");
+  const [nacex, setNacex] = useState("");
   const [threshold, setThreshold] = useState("");
   const [notifyEmail, setNotifyEmail] = useState("");
   const [saving, setSaving] = useState(false);
@@ -31,6 +32,7 @@ function AdminAjustes() {
   useEffect(() => {
     if (data) {
       setFlat((data.shippingFlatCents / 100).toFixed(2));
+      setNacex((data.shippingNacexCents / 100).toFixed(2));
       setThreshold((data.freeThresholdCents / 100).toFixed(2));
       setNotifyEmail(data.notifyEmail ?? "");
     }
@@ -42,6 +44,7 @@ function AdminAjustes() {
       await saveFn({
         data: {
           shippingFlatEuros: parseFloat(flat) || 0,
+          shippingNacexEuros: parseFloat(nacex) || 0,
           freeThresholdEuros: parseFloat(threshold) || 0,
           notifyEmail: notifyEmail.trim(),
         },
@@ -87,6 +90,21 @@ function AdminAjustes() {
               />
               <p className="mt-1 text-xs text-muted-foreground">Coste del envío a domicilio.</p>
             </div>
+                       <div>
+              <Label htmlFor="nacex">Recogida en punto NACEX (€)</Label>
+              <Input
+                id="nacex"
+                type="number"
+                step="0.01"
+                min="0"
+                value={nacex}
+                onChange={(e) => setNacex(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Coste de la recogida en un punto NACEX.
+              </p>
+            </div>
+
             <div>
               <Label htmlFor="threshold">Envío gratis a partir de (€)</Label>
               <Input
@@ -101,6 +119,7 @@ function AdminAjustes() {
                 Pedidos con subtotal igual o superior a este importe no pagan envío.
               </p>
             </div>
+
             <div className="border-t border-border/60 pt-4">
               <Label htmlFor="notify">Correo para avisos de pedidos</Label>
               <Input
