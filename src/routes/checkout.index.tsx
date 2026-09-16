@@ -11,7 +11,7 @@ import { formatPrice } from "@/lib/shopify";
 import { createCheckoutSession, createCashPickupOrder } from "@/lib/checkout.functions";
 import { getShopSettingsPublic } from "@/lib/catalog.functions";
 
-type DeliveryMethod = "delivery" | "pickup";
+type DeliveryMethod = "delivery" | "pickup" | "nacex_point";
 
 export const Route = createFileRoute("/checkout/")({
   head: () => ({
@@ -43,9 +43,10 @@ function CheckoutPage() {
     queryFn: () => getSettings(),
     staleTime: 5 * 60_000,
   });
-  const flatEur = (settings?.shippingFlatCents ?? 699) / 100;
+  const flatEur = (settings?.shippingFlatCents ?? 499) / 100;
+  const nacexEur = (settings?.shippingNacexCents ?? 499) / 100;
   const thresholdEur = (settings?.freeThresholdCents ?? 5500) / 100;
-
+  
   const onPay = async () => {
     setLoading(true);
     try {
@@ -116,7 +117,14 @@ function CheckoutPage() {
 
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
-  const shipping = delivery === "pickup" ? 0 : subtotal >= thresholdEur ? 0 : flatEur;
+  const shipping =
+  delivery === "pickup"
+    ? 0
+    : subtotal >= thresholdEur
+      ? 0
+      : delivery === "nacex_point"
+        ? nacexEur
+        : flatEur;
   const total = subtotal + shipping;
   const missingForFree = delivery === "delivery" ? Math.max(0, thresholdEur - subtotal) : 0;
 
@@ -246,7 +254,27 @@ function CheckoutPage() {
                   </span>
                 </span>
               </label>
-
+              <label
+                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
+                  delivery === "nacex_point" ? "border-espresso bg-secondary/40" : "border-border hover:bg-secondary/20"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery"
+                  className="mt-1 accent-espresso"
+                  checked={delivery === "nacex_point"}
+                  onChange={() => setDelivery("nacex_point")}
+                />
+                <span className="flex-1">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Truck className="h-4 w-4" strokeWidth={1.5} /> Recogida en punto NACEX
+                  </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {formatPrice(nacexEur, currency)} · Gratis desde {formatPrice(thresholdEur, currency)}
+                  </span>
+                </span>
+              </label>
               <label
                 className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
                   delivery === "pickup" ? "border-espresso bg-secondary/40" : "border-border hover:bg-secondary/20"
