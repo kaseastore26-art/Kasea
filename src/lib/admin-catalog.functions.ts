@@ -321,15 +321,16 @@ export const getShopSettingsAdmin = createServerFn({ method: "GET" })
     await assertAdmin(ctx);
     const { data, error } = await (ctx.supabase as any)
       .from("shop_settings")
-      .select("shipping_flat_cents, shipping_free_threshold_cents, notify_email")
+      .select("shipping_flat_cents, shipping_nacex_cents, shipping_free_threshold_cents, notify_email")
       .eq("id", "default")
       .maybeSingle();
     if (error) throw new Error(error.message);
     return {
-      shippingFlatCents: data?.shipping_flat_cents ?? 699,
-      freeThresholdCents: data?.shipping_free_threshold_cents ?? 5500,
-      notifyEmail: data?.notify_email ?? "",
-    };
+  shippingFlatCents: data?.shipping_flat_cents ?? 699,
+  shippingNacexCents: data?.shipping_nacex_cents ?? 499,
+  freeThresholdCents: data?.shipping_free_threshold_cents ?? 5500,
+  notifyEmail: data?.notify_email ?? "",
+};
   });
 
 export const updateShopSettings = createServerFn({ method: "POST" })
@@ -338,6 +339,7 @@ export const updateShopSettings = createServerFn({ method: "POST" })
     z
       .object({
         shippingFlatEuros: z.number().nonnegative(),
+        shippingNacexEuros: z.number().nonnegative(),
         freeThresholdEuros: z.number().nonnegative(),
         notifyEmail: z.string().email().or(z.literal("")).default(""),
       })
@@ -350,6 +352,7 @@ export const updateShopSettings = createServerFn({ method: "POST" })
       .from("shop_settings")
       .update({
         shipping_flat_cents: Math.round(data.shippingFlatEuros * 100),
+        shipping_nacex_cents: Math.round(data.shippingNacexEuros * 100),
         shipping_free_threshold_cents: Math.round(data.freeThresholdEuros * 100),
         notify_email: data.notifyEmail || null,
       })
