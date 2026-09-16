@@ -144,6 +144,18 @@ useEffect(() => {
         ? [{ key: "Marca", value: effectiveBrand }, { key: "Modelo", value: selectedModel }]
         : undefined,
     });
+    const fbq = (window as any).fbq;
+
+if (typeof fbq === "function") {
+  fbq("track", "AddToCart", {
+    content_ids: [variant.id],
+    content_type: "product",
+    content_name: p.title,
+    value: Number(variant.price.amount) * qty,
+    currency: variant.price.currencyCode,
+    contents: [{ id: variant.id, quantity: qty }],
+  });
+}
     if (openCheckout) {
       navigate({ to: "/checkout" });
     }
