@@ -13,6 +13,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 export interface PublicOrderItem {
+  variantId: string | null;
   title: string;
   quantity: number;
   unitPriceCents: number;
@@ -43,7 +44,7 @@ export const getOrderBySession = createServerFn({ method: "GET" })
       .select(
         "status, created_at, currency, subtotal_cents, shipping_cents, total_cents, " +
           "delivery_method, payment_method, payment_status, " +
-          "order_items(title, quantity, unit_price_cents, attributes)",
+          "order_items(variant_id, title, quantity, unit_price_cents, attributes)",
       )
       .eq("stripe_session_id", data.sessionId)
       .maybeSingle();
@@ -61,6 +62,7 @@ export const getOrderBySession = createServerFn({ method: "GET" })
       payment_method: string | null;
       payment_status: string | null;
       order_items: Array<{
+        variant_id: string | null;
         title: string;
         quantity: number;
         unit_price_cents: number | null;
@@ -79,6 +81,7 @@ export const getOrderBySession = createServerFn({ method: "GET" })
       paymentMethod: o.payment_method === "cash" ? "cash" : "card",
       paymentStatus: o.payment_status === "pending" ? "pending" : "paid",
       items: (o.order_items ?? []).map((it) => ({
+        variantId: it.variant_id,
         title: it.title,
         quantity: it.quantity,
         unitPriceCents: it.unit_price_cents ?? 0,
