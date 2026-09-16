@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Shield, Truck, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, isVariantAvailable, variantStockLabel, type ShopifyProduct } from "@/lib/shopify";
@@ -32,6 +32,7 @@ export const Route = createFileRoute("/product/$handle")({
       return { meta: [{ title: "Producto no encontrado — Kasea" }, { name: "robots", content: "noindex" }] };
     }
     const p = loaderData.product.node;
+    
     const img = p.images.edges[0]?.node?.url;
     return {
       meta: [
@@ -85,6 +86,21 @@ function ProductPage() {
   const [selectedModel, setSelectedModel] = useState<string>("");
 
   const variant = p.variants.edges[variantIdx]?.node;
+
+useEffect(() => {
+  const fbq = (window as any).fbq;
+
+  if (typeof fbq === "function" && variant) {
+    fbq("track", "ViewContent", {
+      content_ids: [variant.id],
+      content_type: "product",
+      content_name: p.title,
+      value: Number(variant.price.amount),
+      currency: variant.price.currencyCode,
+    });
+  }
+}, [p.id, p.title, variantIdx]);
+  
   const inStock = isVariantAvailable(variant);
   const addItem = useCartStore((s) => s.addItem);
   const isLoading = useCartStore((s) => s.isLoading);
