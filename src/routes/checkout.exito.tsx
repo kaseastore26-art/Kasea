@@ -24,6 +24,7 @@ function CheckoutSuccessPage() {
   const clearCart = useCartStore((s) => s.clearCart);
   const getOrder = useServerFn(getOrderBySession);
   const attempts = useRef(0);
+  const purchaseSent = useRef(false);
 
   // El pago ya se completó en Stripe (solo se llega aquí tras éxito): vaciamos
   // la bolsa local. La confirmación real del pedido y el correo los gestiona
@@ -74,6 +75,33 @@ function CheckoutSuccessPage() {
       });
     }
   }, [order, session_id]);
+  useEffect(() => {
+  if (!order || !session_id || purchaseSent.current) return;
+  if (order.paymentStatus !== "paid") return;
+
+  const fbq = (window as any).fbq;
+
+  if (typeof fbq !== "function") return;
+
+  const items = order.items
+    .filter((item) => item.variantId)
+    .map((item) => ({
+      id: item.variantId!,
+      quantity: item.quantity,
+    }));
+
+  if (items.length === 0) return;
+
+  fbq("track", "Purchase", {
+    content_ids: items.map((item) => item.id),
+    content_type: "product",
+    contents: items,
+    value: order.totalCents / 100,
+    currency: order.currency,
+  });
+
+  purchaseSent.current = true;
+}, [order, session_id]);
 
   const badge = order ? statusLabel(order.status) : null;
   const cashPending = order?.paymentStatus === "pending";
