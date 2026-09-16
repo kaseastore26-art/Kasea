@@ -149,7 +149,12 @@ export const Route = createFileRoute("/api/stripe-webhook")({
         const cd = session.customer_details ?? {};
         const shipping = session.shipping_details ?? session.shipping ?? null;
         const address = shipping?.address ?? cd.address ?? null;
-        const deliveryMethod = session.metadata?.delivery_method === "pickup" ? "pickup" : "delivery";
+       const deliveryMethod =
+          session.metadata?.delivery_method === "pickup"
+           ? "pickup"
+           : session.metadata?.delivery_method === "nacex_point"
+             ? "nacex_point"
+             : "delivery";
         const currency = String(session.currency ?? "eur").toUpperCase();
         const subtotalCents = session.amount_subtotal ?? 0;
         const shippingCents = session.total_details?.amount_shipping ?? 0;
