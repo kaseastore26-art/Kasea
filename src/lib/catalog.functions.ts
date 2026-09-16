@@ -166,14 +166,15 @@ export const getShopSettingsPublic = createServerFn({ method: "GET" }).handler(a
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("shop_settings")
-    .select("shipping_flat_cents, shipping_free_threshold_cents")
+    .select("shipping_flat_cents, shipping_nacex_cents, shipping_free_threshold_cents")
     .eq("id", "default")
     .maybeSingle();
   if (error) throw new Error(error.message);
   return {
     shippingFlatCents: data?.shipping_flat_cents ?? 699,
+    shippingNacexCents: data?.shipping_nacex_cents ?? 499,
     freeThresholdCents: data?.shipping_free_threshold_cents ?? 5500,
-  };
+ };
 });
 
 // -------- Un producto por handle (ficha) --------
