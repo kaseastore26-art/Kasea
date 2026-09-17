@@ -19,6 +19,7 @@ export interface OrderEmailData {
   shippingCents: number;
   totalCents: number;
   address?: Record<string, unknown> | null;
+  paymentPending?: boolean;
 }
 
 function euros(cents: number, currency = "EUR"): string {
@@ -57,8 +58,14 @@ function buildHtml(data: OrderEmailData): string {
 
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
-    <h1 style="font-size:22px;">¡Gracias por tu compra${data.customerName ? `, ${escapeHtml(data.customerName)}` : ""}!</h1>
-    <p style="color:#555;">Hemos recibido tu pago y estamos preparando tu pedido. Aquí tienes el resumen:</p>
+   <h1 style="font-size:22px;">¡Gracias por tu pedido${data.customerName ? `, ${escapeHtml(data.customerName)}` : ""}!</h1>
+<p style="color:#555;">
+  ${
+    data.paymentPending
+      ? "Hemos recibido correctamente tu pedido. El pago se realizará en tienda al recogerlo."
+      : "Hemos recibido tu pago y estamos preparando tu pedido. Aquí tienes el resumen:"
+  }
+</p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       ${rows}
       <tr><td style="padding:8px 0;color:#555;">Subtotal</td><td style="padding:8px 0;text-align:right;">${euros(data.subtotalCents, data.currency)}</td></tr>
