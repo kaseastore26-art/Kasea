@@ -337,39 +337,90 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
       }
     }
     // Aviso al administrador (mejor esfuerzo; no bloquea la confirmación).
-    try {
-      const { data: settingsRow } = await admin
-        .from("shop_settings")
-        .select("notify_email")
-        .eq("id", "default")
-        .maybeSingle();
-      const notifyEmail =
-        (settingsRow?.notify_email as string | null) || process.env.ADMIN_NOTIFY_EMAIL || "";
-      if (notifyEmail) {
-        const { sendAdminOrderNotification } = await import("@/lib/email");
-        await sendAdminOrderNotification({
-          to: notifyEmail,
-          customerName: data.customerName,
-          customerEmail: data.email || null,
-          phone: data.phone,
-          deliveryMethod: "pickup",
-          address: null,
-          paymentNote: `Pago en EFECTIVO — PENDIENTE de cobro en tienda (${(subtotal / 100).toFixed(2)} ${currency})`,
-          items: rpcItems.map((i) => ({
-            title: String(i.title),
-            quantity: Number(i.quantity),
-            unit_price_cents: Number(i.unit_price_cents),
-            attributes: (i.attributes as Array<{ key: string; value: string }>) ?? [],
-          })),
-          currency,
-          subtotalCents: subtotal,
-          shippingCents: 0,
-          totalCents: subtotal,
-        });
-      }
-    } catch {
-      /* el correo no debe bloquear el pedido */
+try {
+  const { data: settingsRow } = await admin
+    .from("shop_settings")
+    .select("notify_email")
+    .eq("id", "default")
+    .maybeSingle();
+
+  const notifyEmail =
+    (settingsRow?.notify_email as string | null) ||
+    process.env.ADMIN_NOTIFY_EMAIL ||
+    "";
+
+  if (notifyEmail) {
+    const { sendAdminOrderNotification } = await import("@/lib/email");
+
+    const customDesignIds = rpcItems
+      .map((i) => i.custom_design_id)
+      .filter((id): id is string => Boolean(id));
+
+    let designs: Array<{
+      id: string;
+      model: string | null;
+      image_url: string | null;
+      preview_url: string | null;
+      text_content: string | null;
+      font: string | null;
+      color: string | null;
+    }> = [];
+
+    if (customDesignIds.length > 0) {
+      const { data } = await admin
+        .from("custom_designs")
+        .select(
+          "id, model, image_url, preview_url, text_content, font, color"
+        )
+        .in("id", customDesignIds);
+
+      designs = data ?? [];
     }
+
+    await sendAdminOrderNotification({
+      to: notifyEmail,
+      customerName: data.customerName,
+      customerEmail: data.email || null,
+      phone: data.phone,
+      deliveryMethod: "pickup",
+      address: null,
+      paymentNote: `Pago en EFECTIVO — PENDIENTE de cobro en tienda (${(
+        subtotal / 100
+      ).toFixed(2)} ${currency})`,
+      items: rpcItems.map((i) => {
+        const design = designs.find(
+          (d) => d.id === i.custom_design_id
+        );
+
+        return {
+          title: String(i.title),
+          quantity: Number(i.quantity),
+          unit_price_cents: Number(i.unit_price_cents),
+          attributes:
+            (i.attributes as Array<{ key: string; value: string }>) ?? [],
+          design: design
+            ? {
+                model: design.model,
+                text: design.text_content,
+                font: design.font,
+                color: design.color,
+                previewUrl:
+                  design.preview_url ||
+                  design.image_url ||
+                  null,
+              }
+            : null,
+        };
+      }),
+      currency,
+      subtotalCents: subtotal,
+      shippingCents: 0,
+      totalCents: subtotal,
+    });
+  }
+} catch {
+  /* el correo no debe bloquear el pedido */
+}
 
     return { ref };
   });
