@@ -6,7 +6,7 @@ import { ArrowLeft, Shield, Truck, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, isVariantAvailable, variantStockLabel, type ShopifyProduct } from "@/lib/shopify";
 import { useCartStore } from "@/lib/cart";
-import { PHONE_BRANDS, PHONE_MODELS, type PhoneBrand } from "@/lib/phone-models";
+import { PHONE_MODELS } from "@/lib/phone-models";
 import { listProductImageOverridesPublic } from "@/lib/admin.functions";
 import { getProductByHandlePublic, getProductsPublic } from "@/lib/catalog.functions";
 import { FavoriteButton } from "@/components/FavoriteButton";
@@ -77,12 +77,10 @@ export const Route = createFileRoute("/product/$handle")({
 
 function ProductPage() {
   const { product } = Route.useLoaderData();
-  const { collection } = Route.useSearch();
   const p = product.node;
   const [selectedImgIdx, setSelectedImgIdx] = useState(0);
   const [variantIdx, setVariantIdx] = useState(0);
   const [qty, setQty] = useState(1);
-  const [selectedBrand, setSelectedBrand] = useState<PhoneBrand | "">("");
   const [selectedModel, setSelectedModel] = useState<string>("");
 
   const variant = p.variants.edges[variantIdx]?.node;
@@ -107,18 +105,7 @@ useEffect(() => {
   const navigate = useNavigate();
 
   // Detect if variant already provides a model (e.g. "iPhone 17 Pro Max" in title or options)
-  const variantAlreadyHasModel = (variant?.selectedOptions ?? []).some(
-    (o: { name: string; value: string }) => o.name.toLowerCase() === "modelo" || /iphone/i.test(o.value),
-  );
-  const needsModelSelector = !variantAlreadyHasModel;
-
-  // Fundas subliminadas → solo iPhone. Resto (transparentes, etc.) → selector de marca.
-  const productCollections = p.collections?.edges.map((edge: { node: { handle: string; title: string } }) => `${edge.node.handle} ${edge.node.title}`) ?? [];
-  const isSublimacion = /sublim/i.test(
-    `${collection ?? ""} ${p.handle} ${p.title} ${(p.tags ?? []).join(" ")} ${productCollections.join(" ")}`,
-  );
-  const iPhoneOnly = isSublimacion;
-
+  const needsModelSelector = true;
 
   const productsFn = useServerFn(getProductsPublic);
   const { data: related = [] } = useQuery({
@@ -131,8 +118,8 @@ useEffect(() => {
 
   const handleAdd = async (openCheckout = false) => {
     if (!variant) return;
-    if (needsModelSelector && (!selectedModel || (!iPhoneOnly && !selectedBrand))) return;
-    const effectiveBrand = iPhoneOnly ? "iPhone" : selectedBrand;
+    if (needsModelSelector && !selectedModel) return;
+    const effectiveBrand = "iPhone";
     await addItem({
       product,
       variantId: variant.id,
@@ -230,72 +217,41 @@ if (typeof fbq === "function") {
           )}
 
           {needsModelSelector && (
-            <div className="mt-8 space-y-4">
-              {!iPhoneOnly && (
-                <div>
-                  <label htmlFor="brand-select" className="eyebrow mb-3 block">
-                    Elige tu marca <span className="text-espresso">*</span>
-                  </label>
-                  <select
-                    id="brand-select"
-                    value={selectedBrand}
-                    onChange={(e) => {
-                      setSelectedBrand(e.target.value as PhoneBrand | "");
-                      setSelectedModel("");
-                    }}
-                    className="w-full h-12 px-4 border border-border bg-ivory text-espresso font-medium focus:outline-none focus:border-espresso transition-colors appearance-none cursor-pointer"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath fill='none' stroke='%23333' stroke-width='1.5' d='M1 1l5 5 5-5'/%3e%3c/svg%3e")`,
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 1rem center",
-                      paddingRight: "2.5rem",
-                    }}
-                  >
-                    <option value="">— Selecciona la marca —</option>
-                    {PHONE_BRANDS.map((b) => (
-                      <option key={b} value={b}>{b}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+  <div className="mt-8 space-y-4">
+    <div>
+      <label htmlFor="model-select" className="eyebrow mb-3 block">
+        iPhone — elige tu modelo <span className="text-espresso">*</span>
+      </label>
 
-              {(iPhoneOnly || selectedBrand) && (
-                <div>
-                  <label htmlFor="model-select" className="eyebrow mb-3 block">
-                    {iPhoneOnly ? "iPhone — elige tu modelo" : "Elige tu modelo"} <span className="text-espresso">*</span>
-                  </label>
+      <select
+        id="model-select"
+        value={selectedModel}
+        onChange={(e) => setSelectedModel(e.target.value)}
+        className="w-full h-12 px-4 border border-border bg-ivory text-espresso font-medium focus:outline-none focus:border-espresso transition-colors appearance-none cursor-pointer"
+        style={{
+          backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath fill='none' stroke='%23333' stroke-width='1.5' d='M1 1l5 5-5-5'/%3e%3c/svg%3e")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 1rem center",
+          paddingRight: "2.5rem",
+        }}
+      >
+        <option value="">— Selecciona el modelo —</option>
+        {PHONE_MODELS["iPhone"].map((model) => (
+          <option key={model} value={model}>{model}</option>
+        ))}
+      </select>
+    </div>
 
-                  <select
-                    id="model-select"
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
-                    className="w-full h-12 px-4 border border-border bg-ivory text-espresso font-medium focus:outline-none focus:border-espresso transition-colors appearance-none cursor-pointer"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3e%3cpath fill='none' stroke='%23333' stroke-width='1.5' d='M1 1l5 5 5-5'/%3e%3c/svg%3e")`,
-                      backgroundRepeat: "no-repeat",
-                      backgroundPosition: "right 1rem center",
-                      paddingRight: "2.5rem",
-                    }}
-                  >
-                    <option value="">— Selecciona el modelo —</option>
-                    {PHONE_MODELS[iPhoneOnly ? "iPhone" : (selectedBrand as PhoneBrand)].map((model) => (
-                      <option key={model} value={model}>{model}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-
-              <p className="text-xs text-muted-foreground">
-                ¿No encuentras tu modelo?{" "}
-                <Link to="/contacto" className="underline text-espresso hover:opacity-80">
-                  Pregúntanos
-                </Link>{" "}
-                y te ayudamos a encontrar la funda perfecta.
-              </p>
-            </div>
-          )}
-
+    <p className="text-xs text-muted-foreground">
+      ¿No encuentras tu modelo?{" "}
+      <Link to="/contacto" className="underline text-espresso hover:opacity-80">
+        Pregúntanos
+      </Link>{" "}
+      y te ayudamos a encontrar la funda perfecta.
+    </p>
+  </div>
+)}
+  
           <div className="mt-8 flex items-center gap-4">
             <div className="flex items-center border border-border">
               <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-4 py-3 hover:bg-secondary">−</button>
@@ -311,14 +267,14 @@ if (typeof fbq === "function") {
             <Button
               onClick={() => handleAdd(false)}
               variant="outline"
-              disabled={isLoading || !inStock || (needsModelSelector && (!selectedModel || (!iPhoneOnly && !selectedBrand)))}
+              disabled={isLoading || !inStock || (needsModelSelector && !selectedModel)}
               className="w-full h-14 rounded-none border-espresso text-espresso hover:bg-secondary tracking-[0.2em] uppercase text-xs"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Añadir a la bolsa"}
             </Button>
             <Button
               onClick={() => handleAdd(true)}
-              disabled={isLoading || !inStock || (needsModelSelector && (!selectedModel || (!iPhoneOnly && !selectedBrand)))}
+              disabled={isLoading || !inStock || (needsModelSelector && !selectedModel)}
               style={{ backgroundColor: "#000", color: "#fff" }}
               className="w-full h-14 rounded-none hover:opacity-90 tracking-[0.2em] uppercase text-xs disabled:opacity-100 disabled:cursor-not-allowed"
             >
