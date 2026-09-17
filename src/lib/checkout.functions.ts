@@ -14,6 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
+import { sendOrderConfirmationEmail } from "@/lib/email";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -310,7 +311,31 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
       console.error("[cash-order] RPC falló:", rpcErr.message);
       return { error: "No se pudo registrar el pedido. Inténtalo de nuevo." };
     }
-
+    
+    // Confirmación al cliente. En pedidos de pago en tienda,
+    // el pago queda pendiente hasta que el cliente recoge el pedido.
+    if (data.email) {
+      try {
+        await sendOrderConfirmationEmail({
+          to: data.email,
+          customerName: data.customerName,
+          items: rpcItems.map((i) => ({
+            title: String(i.title),
+            quantity: Number(i.quantity),
+            unit_price_cents: Number(i.unit_price_cents),
+            attributes:
+              (i.attributes as Array<{ key: string; value: string }>) ?? [],
+          })),
+          currency,
+          subtotalCents: subtotal,
+          shippingCents: 0,
+          totalCents: subtotal,
+          paymentPending: true,
+        });
+      } catch (err) {
+        console.error("[cash-order] Error enviando confirmación al cliente:", err);
+      }
+    }
     // Aviso al administrador (mejor esfuerzo; no bloquea la confirmación).
     try {
       const { data: settingsRow } = await admin
