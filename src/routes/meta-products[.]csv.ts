@@ -94,10 +94,15 @@ export const Route = createFileRoute("/meta-products.csv")({
           );
 
           const productType =
-            collections[0]?.collections?.title || "Fundas para móviles";
-          
-          const productLink =
-            `${SITE_URL}/product/${product.handle}?collection=sublimacion`;
+           collections[0]?.collections?.title || "Fundas para móviles";
+
+         const isSublimacion = collections.some((c) =>
+           /sublim/i.test(c.collections?.title || ""),
+           );
+
+const productLink = isSublimacion
+  ? `${SITE_URL}/product/${product.handle}?collection=fundas-sublimacion`
+  : `${SITE_URL}/product/${product.handle}`;
 
           for (const variant of variants) {
             const currency = variant.currency || product.currency || "EUR";
