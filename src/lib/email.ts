@@ -139,15 +139,32 @@ function addressLine(address?: Record<string, unknown> | null): string {
 function buildAdminHtml(data: AdminOrderEmailData): string {
   const rows = data.items
     .map((it) => {
-      const design = it.design
-        ? `<div style="margin-top:6px;padding:8px;border:1px solid #eee;border-radius:6px;background:#faf8f5;font-size:12px;">
-             <strong>Diseño personalizado</strong><br>
-             Modelo: ${escapeHtml(it.design.model || "—")}<br>
-             Texto: ${escapeHtml(it.design.text || "—")}<br>
-             Fuente: ${escapeHtml(it.design.font || "—")} · Color: ${escapeHtml(it.design.color || "—")}<br>
-             ${it.design.previewUrl ? `<a href="${escapeHtml(it.design.previewUrl)}">Ver/descargar diseño</a>` : ""}
-           </div>`
-        : "";
+const design = it.design
+  ? `<div style="margin-top:6px;padding:12px;border:1px solid #eee;border-radius:6px;background:#faf8f5;font-size:12px;">
+       <strong>Diseño personalizado</strong><br>
+       ${
+         it.design.previewUrl
+           ? `<div style="margin:10px 0;text-align:center;">
+                <img
+                  src="${escapeHtml(it.design.previewUrl)}"
+                  alt="Diseño personalizado"
+                  style="display:block;max-width:220px;width:100%;height:auto;margin:0 auto;border:1px solid #ddd;border-radius:4px;"
+                >
+              </div>`
+           : ""
+       }
+       Modelo: ${escapeHtml(it.design.model || "—")}<br>
+       Texto: ${escapeHtml(it.design.text || "—")}<br>
+       Fuente: ${escapeHtml(it.design.font || "—")} · Color: ${escapeHtml(it.design.color || "—")}<br>
+       ${
+         it.design.previewUrl
+           ? `<div style="margin-top:8px;">
+                <a href="${escapeHtml(it.design.previewUrl)}">Ver/descargar diseño</a>
+              </div>`
+           : ""
+       }
+     </div>`
+  : "";
       return `
         <tr>
           <td style="padding:8px 0;border-bottom:1px solid #eee;">
