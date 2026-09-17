@@ -305,8 +305,6 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
       _shipping_cents: 0,
       _total_cents: subtotal,
       _items: rpcItems,
-      _payment_method: "cash",
-      _payment_status: "pending",
     });
     if (rpcErr) {
       console.error("[cash-order] RPC falló:", rpcErr.message);
