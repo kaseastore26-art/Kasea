@@ -10,8 +10,109 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/shopify";
 import { uploadImage, pickFile } from "@/lib/admin-upload";
-import { listProductsAdmin, upsertProduct, deleteProduct, setProductOrder } from "@/lib/admin-catalog.functions";
+import {
+  listProductsAdmin,
+  upsertProduct,
+  deleteProduct,
+  setProductOrder,
+  updateProductImageUrl,
+} from "@/lib/admin-catalog.functions";
+async function normalizeImageToWhite(url: string): Promise<File> {
+  const response = await fetch(url, { cache: "no-store" });
 
+  if (!response.ok) {
+    throw new Error("No se pudo descargar la imagen.");
+  }
+
+  const blob = await response.blob();
+  const bitmap = await createImageBitmap(blob);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+
+  const ctx = canvas.getContext("2d", {
+    willReadFrequently: true,
+  });
+
+  if (!ctx) {
+    throw new Error("No se pudo procesar la imagen.");
+  }
+
+  ctx.drawImage(bitmap, 0, 0);
+  bitmap.close();
+
+  const imageData = ctx.getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+
+  const pixels = imageData.data;
+
+  const samples: number[][] = [];
+
+  const points = [
+    [0, 0],
+    [canvas.width - 1, 0],
+    [0, canvas.height - 1],
+    [canvas.width - 1, canvas.height - 1],
+  ];
+
+  for (const [x, y] of points) {
+    const i = (y * canvas.width + x) * 4;
+    samples.push([pixels[i], pixels[i + 1], pixels[i + 2]]);
+  }
+
+  const bgR = samples.reduce((sum, p) => sum + p[0], 0) / samples.length;
+  const bgG = samples.reduce((sum, p) => sum + p[1], 0) / samples.length;
+  const bgB = samples.reduce((sum, p) => sum + p[2], 0) / samples.length;
+
+  const tolerance = 35;
+
+  for (let i = 0; i < pixels.length; i += 4) {
+    const r = pixels[i];
+    const g = pixels[i + 1];
+    const b = pixels[i + 2];
+
+    const distance = Math.sqrt(
+      (r - bgR) ** 2 +
+        (g - bgG) ** 2 +
+        (b - bgB) ** 2,
+    );
+
+    const brightness = (r + g + b) / 3;
+
+    if (distance <= tolerance && brightness >= 215) {
+      pixels[i] = 255;
+      pixels[i + 1] = 255;
+      pixels[i + 2] = 255;
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+
+  const outputBlob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (result) => {
+        if (result) {
+          resolve(result);
+        } else {
+          reject(new Error("No se pudo crear la imagen."));
+        }
+      },
+      "image/png",
+      1,
+    );
+  });
+
+  return new File(
+    [outputBlob],
+    `producto-fondo-blanco-${Date.now()}.png`,
+    { type: "image/png" },
+  );
+}
 export const Route = createFileRoute("/_authenticated/admin/productos")({
   component: AdminProductos,
 });
