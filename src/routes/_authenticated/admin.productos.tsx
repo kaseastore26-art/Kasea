@@ -147,6 +147,8 @@ function AdminProductos() {
   const delFn = useServerFn(deleteProduct);
   const orderFn = useServerFn(setProductOrder);
   const [reordering, setReordering] = useState(false);
+  const updateImageFn = useServerFn(updateProductImageUrl);
+  const [normalizing, setNormalizing] = useState(false);
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["admin-products"],
@@ -250,7 +252,41 @@ function AdminProductos() {
       });
     }
   }
+  async function normalizeOneProduct(p: ProductRow) {
+    if (!p.imageUrl) {
+      toast.error("Este producto no tiene imagen.");
+      return;
+    }
 
+    if (!confirm(`¿Convertir el fondo de "${p.title}" a blanco?`)) {
+      return;
+    }
+
+    setNormalizing(true);
+
+    try {
+      const file = await normalizeImageToWhite(p.imageUrl);
+
+      const newUrl = await uploadImage(file, "products");
+
+      await updateImageFn({
+        data: {
+          productId: p.id,
+          imageUrl: newUrl,
+        },
+      });
+
+      await qc.invalidateQueries({ queryKey: ["admin-products"] });
+
+      toast.success("Fondo convertido a blanco");
+    } catch (e) {
+      toast.error("No se pudo normalizar la imagen", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setNormalizing(false);
+    }
+  }
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -340,17 +376,34 @@ function AdminProductos() {
                         <ArrowUp className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        disabled={index === products.length - 1 || reordering}
-                        onClick={() => move(index, "down")}
-                        aria-label="Bajar"
-                      >
-                        <ArrowDown className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(p)} aria-label="Editar">
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+  variant="ghost"
+  size="icon"
+  disabled={index === products.length - 1 || reordering}
+  onClick={() => move(index, "down")}
+  aria-label="Bajar"
+>
+  <ArrowDown className="h-4 w-4" />
+</Button>
+
+<Button
+  variant="ghost"
+  size="icon"
+  onClick={() => normalizeOneProduct(p)}
+  disabled={normalizing}
+  aria-label="Fondo blanco"
+  title="Convertir fondo a blanco"
+>
+  ✨
+</Button>
+
+<Button
+  variant="ghost"
+  size="icon"
+  onClick={() => openEdit(p)}
+  aria-label="Editar"
+>
+  <Pencil className="h-4 w-4" />
+</Button>
                       <Button
                         variant="ghost"
                         size="icon"
