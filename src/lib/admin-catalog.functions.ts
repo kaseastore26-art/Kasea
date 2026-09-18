@@ -360,3 +360,55 @@ export const updateShopSettings = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+export const updateProductImageUrl = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: unknown) =>
+      z
+        .object({
+          productId: z.string().uuid(),
+          imageUrl: z.string().url(),
+        })
+        .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as AuthedContext;
+    await assertAdmin(ctx);
+
+    const { data: existingImage, error: findError } = await ctx.supabase
+      .from("product_images")
+      .select("id")
+      .eq("product_id", data.productId)
+      .order("position", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (findError) {
+      throw new Error(findError.message);
+    }
+
+    if (existingImage?.id) {
+      const { error } = await ctx.supabase
+        .from("product_images")
+        .update({ url: data.imageUrl })
+        .eq("id", existingImage.id);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    } else {
+      const { error } = await ctx.supabase
+        .from("product_images")
+        .insert({
+          product_id: data.productId,
+          url: data.imageUrl,
+          position: 0,
+        });
+
+      if (error) {
+        throw new Error(error.message);
+      }
+    }
+
+    return { ok: true };
+  });
