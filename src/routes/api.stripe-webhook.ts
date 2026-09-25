@@ -145,16 +145,28 @@ export const Route = createFileRoute("/api/stripe-webhook")({
             i.product_handle = handleById.get(i.variant_id) ?? null;
           });
         }
-
         const cd = session.customer_details ?? {};
-        const shipping = session.shipping_details ?? session.shipping ?? null;
-        const address = shipping?.address ?? cd.address ?? null;
-       const deliveryMethod =
-          session.metadata?.delivery_method === "pickup"
-           ? "pickup"
-           : session.metadata?.delivery_method === "nacex_point"
-             ? "nacex_point"
-             : "delivery";
+const shipping = session.shipping_details ?? session.shipping ?? null;
+
+const deliveryMethod =
+  session.metadata?.delivery_method === "pickup"
+    ? "pickup"
+    : session.metadata?.delivery_method === "nacex_point"
+      ? "nacex_point"
+      : "delivery";
+
+const address =
+  deliveryMethod === "nacex_point"
+    ? {
+        postal_code: session.metadata?.nacex_postal_code ?? "",
+        line1: session.metadata?.nacex_address ?? "",
+      }
+    : shipping?.address ?? cd.address ?? null;
+
+const orderAddress =
+  deliveryMethod === "nacex_point"
+    ? address
+    : shipping ?? (address ? { address } : null);
         const currency = String(session.currency ?? "eur").toUpperCase();
         const subtotalCents = session.amount_subtotal ?? 0;
         const shippingCents = session.total_details?.amount_shipping ?? 0;
@@ -170,7 +182,7 @@ export const Route = createFileRoute("/api/stripe-webhook")({
           _email: cd.email ?? null,
           _name: cd.name ?? shipping?.name ?? null,
           _phone: cd.phone ?? null,
-          _address: shipping ?? (address ? { address } : null),
+          _address: orderAddress,
           _delivery_method: deliveryMethod,
           _currency: currency,
           _subtotal_cents: subtotalCents,
