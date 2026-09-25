@@ -37,7 +37,8 @@ function CheckoutPage() {
   const [cashName, setCashName] = useState("");
   const [cashPhone, setCashPhone] = useState("");
   const [cashEmail, setCashEmail] = useState("");
-
+  const [nacexPostalCode, setNacexPostalCode] = useState("");
+  const [nacexAddress, setNacexAddress] = useState("");
   const { data: settings } = useQuery({
     queryKey: ["shop-settings"],
     queryFn: () => getSettings(),
@@ -48,6 +49,12 @@ function CheckoutPage() {
   const thresholdEur = (settings?.freeThresholdCents ?? 5500) / 100;
   
   const onPay = async () => {
+    if (delivery === "nacex_point" && (!nacexPostalCode.trim() || !nacexAddress.trim())) {
+  toast.error("Completa los datos de recogida NACEX", {
+    description: "Necesitamos el código postal y la dirección o zona donde quieres recoger.",
+  });
+  return;
+}
     setLoading(true);
     try {
       const res = await startCheckout({
@@ -59,8 +66,10 @@ function CheckoutPage() {
             customDesignId: i.customDesignId,
           })),
           deliveryMethod: delivery,
+          nacexPostalCode: delivery === "nacex_point" ? nacexPostalCode.trim() : undefined,
+          nacexAddress: delivery === "nacex_point" ? nacexAddress.trim() : undefined,
           origin: window.location.origin,
-        },
+          },
       });
       if ("url" in res) {
         window.location.href = res.url; // redirige a la pasarela de Stripe
@@ -299,6 +308,45 @@ function CheckoutPage() {
             </div>
 
             {/* Recogida en tienda: elegir pagar ahora con tarjeta o en efectivo allí. */}
+           {delivery === "nacex_point" && (
+  <div className="mt-5 border-t border-border/60 pt-5">
+    <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+      Datos para la recogida NACEX
+    </p>
+
+    <p className="mb-4 text-xs text-muted-foreground">
+      Indica el código postal y la zona donde quieres recoger tu pedido.
+      Estos datos nos sirven para localizar el punto NACEX adecuado.
+    </p>
+
+    <div className="space-y-3">
+      <div>
+        <label className="mb-1 block text-xs font-medium">
+          Código postal *
+        </label>
+        <Input
+          value={nacexPostalCode}
+          onChange={(e) => setNacexPostalCode(e.target.value)}
+          placeholder="Ej.: 46100"
+          inputMode="numeric"
+          maxLength={10}
+        />
+      </div>
+
+      <div>
+        <label className="mb-1 block text-xs font-medium">
+          Dirección o zona donde quieres recoger *
+        </label>
+        <Input
+          value={nacexAddress}
+          onChange={(e) => setNacexAddress(e.target.value)}
+          placeholder="Ej.: Burjassot, zona centro"
+          maxLength={200}
+        />
+      </div>
+    </div>
+  </div>
+)}
             {delivery === "pickup" && (
               <div className="mt-5 border-t border-border/60 pt-5">
                 <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
