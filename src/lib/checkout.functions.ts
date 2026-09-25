@@ -63,6 +63,8 @@ const ItemSchema = z.object({
 const InputSchema = z.object({
   items: z.array(ItemSchema).min(1),
   deliveryMethod: z.enum(["delivery", "pickup", "nacex_point"]).default("delivery"),
+  nacexPostalCode: z.string().trim().max(10).optional(),
+  nacexAddress: z.string().trim().max(200).optional(),
   // Origen del sitio para las URLs de retorno (se valida contra SITE_URL si existe).
   origin: z.string().url().optional(),
 });
@@ -173,7 +175,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       billing_address_collection: "auto",
       phone_number_collection: { enabled: true },
       line_items: lineItems,
-      metadata: { delivery_method: data.deliveryMethod },
+      metadata: {
+       delivery_method: data.deliveryMethod,
+        ...(data.deliveryMethod === "nacex_point"
+           ? {
+        nacex_postal_code: data.nacexPostalCode ?? "",
+        nacex_address: data.nacexAddress ?? "",
+      }
+    : {}),
+},
+},
       success_url: `${base}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout`,
     };
