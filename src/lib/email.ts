@@ -120,7 +120,7 @@ export interface AdminOrderEmailData {
   customerName?: string | null;
   customerEmail?: string | null;
   phone?: string | null;
-  deliveryMethod: "delivery" | "pickup";
+  deliveryMethod: "delivery" | "pickup" | "nacex_point";
   address?: Record<string, unknown> | null;
   paymentNote?: string | null;
   items: AdminOrderItem[];
@@ -178,10 +178,19 @@ const design = it.design
     .join("");
 
   const entrega =
-    data.deliveryMethod === "pickup"
-      ? "Recoger en tienda"
-      : `Envío a domicilio${addressLine(data.address) ? `<br>${escapeHtml(addressLine(data.address))}` : ""}`;
-
+  data.deliveryMethod === "pickup"
+    ? "Recoger en tienda"
+    : data.deliveryMethod === "nacex_point"
+      ? `Recogida en punto NACEX${
+          addressLine(data.address)
+            ? `<br><strong>Código postal / zona:</strong> ${escapeHtml(addressLine(data.address))}`
+            : ""
+        }`
+      : `Envío a domicilio${
+          addressLine(data.address)
+            ? `<br>${escapeHtml(addressLine(data.address))}`
+            : ""
+        }`;
   return `
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a;">
     <h1 style="font-size:20px;">Nueva orden recibida</h1>
