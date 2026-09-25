@@ -175,16 +175,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       billing_address_collection: "auto",
       phone_number_collection: { enabled: true },
       line_items: lineItems,
-      metadata: {
-       delivery_method: data.deliveryMethod,
+            metadata: {
+        delivery_method: data.deliveryMethod,
         ...(data.deliveryMethod === "nacex_point"
-           ? {
-        nacex_postal_code: data.nacexPostalCode ?? "",
-        nacex_address: data.nacexAddress ?? "",
-      }
-    : {}),
-},
-},
+          ? {
+              nacex_postal_code: data.nacexPostalCode ?? "",
+              nacex_address: data.nacexAddress ?? "",
+            }
+          : {}),
+      },
       success_url: `${base}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout`,
     };
