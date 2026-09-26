@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  getCaseModelStockAdmin,
+import {
+  getCaseModelStockPublic,
   updateCaseModelStock,
 } from "@/lib/case-stock.functions";
 import { PHONE_MODELS } from "@/lib/phone-models";
