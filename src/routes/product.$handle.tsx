@@ -6,6 +6,7 @@ import { ArrowLeft, Shield, Truck, RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPrice, isVariantAvailable, variantStockLabel, type ShopifyProduct } from "@/lib/shopify";
 import { useCartStore } from "@/lib/cart";
+import { getCaseModelStockPublic } from "@/lib/case-stock.functions";
 import { PHONE_MODELS } from "@/lib/phone-models";
 import { listProductImageOverridesPublic } from "@/lib/admin.functions";
 import { getProductByHandlePublic, getProductsPublic } from "@/lib/catalog.functions";
@@ -106,6 +107,22 @@ useEffect(() => {
 
   // Detect if variant already provides a model (e.g. "iPhone 17 Pro Max" in title or options)
   const needsModelSelector = true;
+    const caseStockFn = useServerFn(getCaseModelStockPublic);
+
+  const { data: caseModelStock = {}, isLoading: caseStockLoading } = useQuery({
+    queryKey: ["case-model-stock"],
+    queryFn: () => caseStockFn(),
+    staleTime: 30_000,
+  });
+
+  const selectedModelStock = selectedModel
+    ? Number(caseModelStock[selectedModel] ?? 0)
+    : 0;
+
+  const modelOutOfStock = Boolean(selectedModel) && selectedModelStock <= 0;
+
+  const modelStockExceeded =
+    Boolean(selectedModel) && qty > selectedModelStock;
 
   const productsFn = useServerFn(getProductsPublic);
   const { data: related = [] } = useQuery({
@@ -236,10 +253,33 @@ if (typeof fbq === "function") {
         }}
       >
         <option value="">— Selecciona el modelo —</option>
-        {PHONE_MODELS["iPhone"].map((model) => (
-          <option key={model} value={model}>{model}</option>
-        ))}
+        {PHONE_MODELS["iPhone"].map((model) => {
+  const stock = Number(caseModelStock[model] ?? 0);
+
+  return (
+    <option
+      key={model}
+      value={model}
+      disabled={stock <= 0}
+    >
+      {model}{stock <= 0 ? " — sin stock" : ""}
+    </option>
+  );
+})}
       </select>
+      {!caseStockLoading && modelOutOfStock && (
+  <p className="mt-3 text-sm text-red-600">
+    🔴 {selectedModel} sin stock
+    <br />
+    Estamos reponiendo unidades. Vuelve a intentarlo mañana, ¡quizás ya tengamos stock! ✨
+  </p>
+)}
+
+{!caseStockLoading && selectedModel && selectedModelStock > 0 && (
+  <p className="mt-2 text-xs text-muted-foreground">
+    {selectedModelStock} {selectedModelStock === 1 ? "unidad disponible" : "unidades disponibles"}
+  </p>
+)}
     </div>
 
     <p className="text-xs text-muted-foreground">
@@ -256,7 +296,18 @@ if (typeof fbq === "function") {
             <div className="flex items-center border border-border">
               <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-4 py-3 hover:bg-secondary">−</button>
               <span className="w-10 text-center">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="px-4 py-3 hover:bg-secondary">+</button>
+              <button
+  onClick={() =>
+    setQty((current) =>
+      selectedModelStock > 0
+        ? Math.min(current + 1, selectedModelStock)
+        : current
+    )
+  }
+  className="px-4 py-3 hover:bg-secondary"
+>
+  +
+</button>
             </div>
             <span className="text-sm text-muted-foreground">
               {variantStockLabel(variant)}
@@ -267,14 +318,28 @@ if (typeof fbq === "function") {
             <Button
               onClick={() => handleAdd(false)}
               variant="outline"
-              disabled={isLoading || !inStock || (needsModelSelector && !selectedModel)}
+              disabled={
+  isLoading ||
+  !inStock ||
+  caseStockLoading ||
+  !selectedModel ||
+  modelOutOfStock ||
+  modelStockExceeded
+}
               className="w-full h-14 rounded-none border-espresso text-espresso hover:bg-secondary tracking-[0.2em] uppercase text-xs"
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Añadir a la bolsa"}
             </Button>
             <Button
               onClick={() => handleAdd(true)}
-              disabled={isLoading || !inStock || (needsModelSelector && !selectedModel)}
+              disabled={
+  isLoading ||
+  !inStock ||
+  caseStockLoading ||
+  !selectedModel ||
+  modelOutOfStock ||
+  modelStockExceeded
+}
               style={{ backgroundColor: "#000", color: "#fff" }}
               className="w-full h-14 rounded-none hover:opacity-90 tracking-[0.2em] uppercase text-xs disabled:opacity-100 disabled:cursor-not-allowed"
             >
