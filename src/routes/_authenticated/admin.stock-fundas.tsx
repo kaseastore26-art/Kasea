@@ -19,6 +19,7 @@ function StockFundasPage() {
       updated_at: string;
     }>
   >([]);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -30,32 +31,37 @@ function StockFundasPage() {
   async function loadStock() {
     try {
       setLoading(true);
+      setMessage("");
 
-      const data = await getCaseModelStockAdmin();
+      const data = await getCaseModelStockPublic();
 
       setStock(
-        data.map((item) => ({
-          id: item.id,
-          model: item.model,
-          stock: Number(item.stock ?? 0),
-          updated_at: item.updated_at,
+        Object.entries(data).map(([model, stock]) => ({
+          id: model,
+          model,
+          stock: Number(stock ?? 0),
+          updated_at: "",
         })),
       );
     } catch (error) {
-  console.error(error);
+      console.error(error);
 
-  const errorMessage =
-    error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
 
-  setMessage(`❌ Error: ${errorMessage}`);
-}
+      setMessage(`❌ Error: ${errorMessage}`);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function saveStock(model: string, value: string) {
     const newStock = Number(value);
 
     if (!Number.isInteger(newStock) || newStock < 0) {
-      setMessage("❌ El stock debe ser un número entero igual o mayor que 0.");
+      setMessage(
+        "❌ El stock debe ser un número entero igual o mayor que 0.",
+      );
       return;
     }
 
@@ -85,7 +91,11 @@ function StockFundasPage() {
       setMessage(`✅ Stock de ${model} actualizado.`);
     } catch (error) {
       console.error(error);
-      setMessage(`❌ No se pudo actualizar el stock de ${model}.`);
+
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      setMessage(`❌ Error: ${errorMessage}`);
     } finally {
       setSaving(null);
     }
