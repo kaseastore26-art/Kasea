@@ -70,6 +70,12 @@ function AdminLayout() {
             <Package className="h-4 w-4" /> Productos
           </Link>
           <Link
+          to="/admin/stock-fundas"
+          className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-secondary aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
+          >
+  📱 Stock de fundas
+</Link>
+          <Link
             to="/admin/pedidos"
             className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-secondary aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
           >
