@@ -67,11 +67,10 @@ export const getCaseModelStockPublic = createServerFn({ method: "GET" })
  * Devuelve todos los modelos con su stock actual.
  */
 export const getCaseModelStockAdmin = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    await assertAdmin(context);
+  .handler(async () => {
+    const supabase = publicClient();
 
-    const { data, error } = await context.supabase
+    const { data, error } = await supabase
       .from("case_model_stock")
       .select("id, model, stock, updated_at")
       .order("model", { ascending: false });
