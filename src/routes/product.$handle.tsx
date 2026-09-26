@@ -310,8 +310,8 @@ if (typeof fbq === "function") {
 </button>
             </div>
             <span className="text-sm text-muted-foreground">
-              {variantStockLabel(variant)}
-            </span>
+            {modelOutOfStock ? "Sin stock" : variantStockLabel(variant)}
+             </span>
           </div>
 
           <div className="mt-6 space-y-3">
