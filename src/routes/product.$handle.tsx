@@ -254,24 +254,24 @@ if (typeof fbq === "function") {
       >
         <option value="">— Selecciona el modelo —</option>
         {PHONE_MODELS["iPhone"].map((model) => {
-  const stock = Number(caseModelStock[model] ?? 0);
-
   return (
     <option
       key={model}
       value={model}
-      disabled={stock <= 0}
     >
-      {model}{stock <= 0 ? " — sin stock" : ""}
+      {model}
     </option>
   );
 })}
       </select>
       {!caseStockLoading && modelOutOfStock && (
   <p className="mt-3 text-sm text-red-600">
-    🔴 {selectedModel} sin stock
+    🔴 <strong>{selectedModel} sin stock</strong>
     <br />
-    Estamos reponiendo unidades. Vuelve a intentarlo mañana, ¡quizás ya tengamos stock! ✨
+    Estamos reponiendo unidades.{" "}
+    <strong>
+      Vuelve a intentarlo más adelante, ¡quizás ya tengamos stock! ✨
+    </strong>
   </p>
 )}
 
