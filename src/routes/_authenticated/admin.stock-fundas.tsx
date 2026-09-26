@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-import {
   getCaseModelStockPublic,
   updateCaseModelStock,
 } from "@/lib/case-stock.functions";
