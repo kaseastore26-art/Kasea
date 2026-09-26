@@ -42,11 +42,13 @@ function StockFundasPage() {
         })),
       );
     } catch (error) {
-      console.error(error);
-      setMessage("❌ No se pudo cargar el stock.");
-    } finally {
-      setLoading(false);
-    }
+  console.error(error);
+
+  const errorMessage =
+    error instanceof Error ? error.message : String(error);
+
+  setMessage(`❌ Error: ${errorMessage}`);
+}
   }
 
   async function saveStock(model: string, value: string) {
