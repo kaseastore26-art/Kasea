@@ -572,6 +572,7 @@ function CheckoutPage() {
                 </label>
                 </div>
             )}
+                </div>
           <div className="rounded-xl border border-border/60 bg-card p-6">
             <h2 className="eyebrow mb-5">Resumen</h2>
 
