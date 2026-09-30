@@ -571,37 +571,7 @@ function CheckoutPage() {
                       </span>
                     </span>
                   </label>
-                </div>
-
-                {payMethod === "cash" && (
-                  <div className="mt-4 space-y-3">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium">Nombre y apellidos</label>
-                      <Input value={cashName} onChange={(e) => setCashName(e.target.value)} placeholder="Tu nombre" />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium">Teléfono</label>
-                      <Input
-                        value={cashPhone}
-                        onChange={(e) => setCashPhone(e.target.value)}
-                        placeholder="Para avisarte cuando esté listo"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-xs font-medium">Email (opcional)</label>
-                      <Input
-                        type="email"
-                        value={cashEmail}
-                        onChange={(e) => setCashEmail(e.target.value)}
-                        placeholder="tu@email.com"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
+                </div>                 
           <div className="rounded-xl border border-border/60 bg-card p-6">
             <h2 className="eyebrow mb-5">Resumen</h2>
 
