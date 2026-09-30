@@ -25,16 +25,24 @@ function publicClient() {
 // Coste de envío (autoritativo). La tarifa/umbral vienen de shop_settings
 // (editables en el admin). En recogida en tienda no hay coste de envío.
 function computeShipping(
-  subtotalCents: number,
   deliveryMethod: "delivery" | "pickup" | "nacex_point",
-  flatCents: number,
-  nacexCents: number,
-  thresholdCents: number,
+  postalCode?: string,
 ): number {
   if (deliveryMethod === "pickup") return 0;
-  if (subtotalCents <= 0) return 0;
-  if (subtotalCents >= thresholdCents) return 0;
-  return deliveryMethod === "nacex_point" ? nacexCents : flatCents;
+
+  if (deliveryMethod === "nacex_point") {
+    return 499;
+  }
+
+  // 07xxx = Islas Baleares
+  // Resto de códigos postales españoles = 7,99 €
+  const cp = (postalCode ?? "").replace(/\s/g, "");
+
+  if (/^07\d{3}$/.test(cp)) {
+    return 1799;
+  }
+
+  return 799;
 }
 
 // Aplana un objeto/array a los pares clave-valor con notación de corchetes
@@ -62,10 +70,27 @@ const ItemSchema = z.object({
 });
 const InputSchema = z.object({
   items: z.array(ItemSchema).min(1),
-  deliveryMethod: z.enum(["delivery", "pickup", "nacex_point"]).default("delivery"),
+
+  deliveryMethod: z
+    .enum(["delivery", "pickup", "nacex_point"])
+    .default("delivery"),
+
+  // Datos del cliente
+  customerName: z.string().trim().min(2).max(120),
+  customerEmail: z.string().trim().email().max(200),
+  customerPhone: z.string().trim().min(6).max(30),
+
+  // Dirección de envío
+  shippingAddress: z.string().trim().max(200).optional(),
+  shippingPostalCode: z.string().trim().max(10).optional(),
+  shippingCity: z.string().trim().max(100).optional(),
+  shippingProvince: z.string().trim().max(100).optional(),
+  shippingCountry: z.string().trim().max(100).optional(),
+
+  // NACEX
   nacexPostalCode: z.string().trim().max(10).optional(),
   nacexAddress: z.string().trim().max(200).optional(),
-  // Origen del sitio para las URLs de retorno (se valida contra SITE_URL si existe).
+
   origin: z.string().url().optional(),
 });
 
@@ -88,6 +113,39 @@ export type CheckoutResult = { url: string } | { error: string };
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => InputSchema.parse(d))
   .handler(async ({ data }): Promise<CheckoutResult> => {
+     // Validar los datos de envío en el servidor
+    if (data.deliveryMethod === "delivery") {
+      const cp = (data.shippingPostalCode ?? "").replace(/\s/g, "");
+
+      if (
+        !data.shippingAddress?.trim() ||
+        !data.shippingPostalCode?.trim() ||
+        !data.shippingCity?.trim() ||
+        !data.shippingProvince?.trim() ||
+        !data.shippingCountry?.trim()
+      ) {
+        return {
+          error: "Completa todos los datos de la dirección de envío.",
+        };
+      }
+
+      if (!/^\d{5}$/.test(cp)) {
+        return {
+          error: "El código postal debe tener 5 números.",
+        };
+      }
+    }
+
+    if (data.deliveryMethod === "nacex_point") {
+      if (
+        !data.nacexPostalCode?.trim() ||
+        !data.nacexAddress?.trim()
+      ) {
+        return {
+          error: "Completa los datos del punto NACEX.",
+        };
+      }
+    }
     const secret = process.env.STRIPE_SECRET_KEY;
     if (!secret) {
       return { error: "El pago aún no está configurado (falta STRIPE_SECRET_KEY)." };
@@ -152,19 +210,25 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         },
       });
     }
-
-    // 2) Envío (recalculado en servidor desde shop_settings, editable en admin).
-    const { data: settings } = await supabase
-      .from("shop_settings")
-      .select("shipping_flat_cents, shipping_nacex_cents, shipping_free_threshold_cents")
-      .eq("id", "default")
-      .maybeSingle();
-    const flatCents = settings?.shipping_flat_cents ?? Number(process.env.SHIPPING_FLAT_CENTS ?? 699);
-    const nacexCents = settings?.shipping_nacex_cents ?? 499;
-    const thresholdCents =
-      settings?.shipping_free_threshold_cents ?? Number(process.env.SHIPPING_FREE_THRESHOLD_CENTS ?? 5500);
-    const ship = computeShipping(subtotal, data.deliveryMethod, flatCents, nacexCents, thresholdCents);
-
+   const ship = computeShipping(
+  data.deliveryMethod,
+  data.shippingPostalCode,
+);
+if (ship > 0) {
+  lineItems.push({
+    quantity: 1,
+    price_data: {
+      currency: "eur",
+      unit_amount: ship,
+      product_data: {
+        name:
+          data.deliveryMethod === "nacex_point"
+            ? "Recogida en punto NACEX"
+            : "Envío a domicilio",
+      },
+    },
+  });
+}
     // 3) Parámetros de la sesión de Stripe Checkout (hosted).
     const params: Record<string, unknown> = {
       mode: "payment",
@@ -172,30 +236,38 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       // Solo tarjeta (Visa/MasterCard). Apple Pay/Google Pay funcionan sobre
       // tarjeta si el dispositivo los tiene. Se pueden añadir más métodos luego.
       payment_method_types: ["card"],
-      billing_address_collection: "auto",
-      phone_number_collection: { enabled: true },
       line_items: lineItems,
-            metadata: {
-        delivery_method: data.deliveryMethod,
-        ...(data.deliveryMethod === "nacex_point"
-          ? {
-              nacex_postal_code: data.nacexPostalCode ?? "",
-              nacex_address: data.nacexAddress ?? "",
-            }
-          : {}),
-      },
+      metadata: {
+  delivery_method: data.deliveryMethod,
+
+  customer_name: data.customerName ?? "",
+  customer_email: data.customerEmail ?? "",
+  customer_phone: data.customerPhone ?? "",
+
+  shipping_address: data.shippingAddress ?? "",
+  shipping_postal_code: data.shippingPostalCode ?? "",
+  shipping_city: data.shippingCity ?? "",
+  shipping_province: data.shippingProvince ?? "",
+  shipping_country: data.shippingCountry ?? "",
+
+  ...(data.deliveryMethod === "nacex_point"
+    ? {
+        nacex_postal_code: data.nacexPostalCode ?? "",
+        nacex_address: data.nacexAddress ?? "",
+      }
+    : {}),
+},
       success_url: `${base}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout`,
     };
 
     if (data.deliveryMethod === "delivery") {
   // Envío a domicilio: pide dirección (España) y cobra el envío calculado.
-  params.shipping_address_collection = { allowed_countries: ["ES"] };
   params.shipping_options = [
     {
       shipping_rate_data: {
         type: "fixed_amount",
-        display_name: ship === 0 ? "Envío gratis" : "Envío estándar",
+        display_name: "Envío a domicilio",
         fixed_amount: { amount: ship, currency: "eur" },
       },
     },
@@ -223,6 +295,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     },
   ];
 }
+params.shipping_options = undefined;
 
     const body = new URLSearchParams(toStripePairs(params)).toString();
 

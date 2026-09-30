@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ShoppingBag, ArrowLeft, Truck, Lock, Loader2, Store, CreditCard, Banknote } from "lucide-react";
 import { toast } from "sonner";
@@ -9,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/lib/cart";
 import { formatPrice } from "@/lib/shopify";
 import { createCheckoutSession, createCashPickupOrder } from "@/lib/checkout.functions";
-import { getShopSettingsPublic } from "@/lib/catalog.functions";
 
 type DeliveryMethod = "delivery" | "pickup" | "nacex_point";
 
@@ -29,7 +27,6 @@ function CheckoutPage() {
   const removeItem = useCartStore((s) => s.removeItem);
   const startCheckout = useServerFn(createCheckoutSession);
   const startCash = useServerFn(createCashPickupOrder);
-  const getSettings = useServerFn(getShopSettingsPublic);
   const [loading, setLoading] = useState(false);
   const [delivery, setDelivery] = useState<DeliveryMethod>("delivery");
   // Solo aplica a recogida en tienda: pagar ahora con tarjeta o en efectivo allí.
@@ -37,105 +34,172 @@ function CheckoutPage() {
   const [cashName, setCashName] = useState("");
   const [cashPhone, setCashPhone] = useState("");
   const [cashEmail, setCashEmail] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [shippingPostalCode, setShippingPostalCode] = useState("");
+  const [shippingCity, setShippingCity] = useState("");
+  const [shippingProvince, setShippingProvince] = useState("");
+  const [shippingCountry, setShippingCountry] = useState("España");
   const [nacexPostalCode, setNacexPostalCode] = useState("");
   const [nacexAddress, setNacexAddress] = useState("");
-  const { data: settings } = useQuery({
-    queryKey: ["shop-settings"],
-    queryFn: () => getSettings(),
-    staleTime: 5 * 60_000,
-  });
-  const flatEur = (settings?.shippingFlatCents ?? 499) / 100;
-  const nacexEur = (settings?.shippingNacexCents ?? 499) / 100;
-  const thresholdEur = (settings?.freeThresholdCents ?? 5500) / 100;
   
   const onPay = async () => {
-    if (delivery === "nacex_point" && (!nacexPostalCode.trim() || !nacexAddress.trim())) {
-  toast.error("Completa los datos de recogida NACEX", {
-    description: "Necesitamos el código postal y la dirección o zona donde quieres recoger.",
-  });
-  return;
-}
-    setLoading(true);
-    try {
-      const res = await startCheckout({
-        data: {
-          items: items.map((i) => ({
-            variantId: i.variantId,
-            quantity: i.quantity,
-            attributes: i.attributes,
-            customDesignId: i.customDesignId,
-          })),
-          deliveryMethod: delivery,
-          nacexPostalCode: delivery === "nacex_point" ? nacexPostalCode.trim() : undefined,
-          nacexAddress: delivery === "nacex_point" ? nacexAddress.trim() : undefined,
-          origin: window.location.origin,
-          },
-      });
-      if ("url" in res) {
-        window.location.href = res.url; // redirige a la pasarela de Stripe
-        return;
-      }
-      toast.error("No se pudo iniciar el pago", { description: res.error });
-    } catch (e) {
-      toast.error("No se pudo iniciar el pago", {
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Datos básicos obligatorios para cualquier pedido
+  if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+    toast.error("Completa tus datos", {
+      description: "Necesitamos nombre, email y teléfono para continuar.",
+    });
+    return;
+  }
 
-  // Recogida en tienda + pago en efectivo: registra el pedido sin pasar por Stripe.
-  const onCashOrder = async () => {
-    if (!cashName.trim() || !cashPhone.trim()) {
-      toast.error("Falta tu nombre y teléfono", {
-        description: "Los necesitamos para preparar tu pedido de recogida.",
+  // Envío a domicilio
+  if (delivery === "delivery") {
+    const cp = shippingPostalCode.trim();
+
+    if (
+      !shippingAddress.trim() ||
+      !cp ||
+      !shippingCity.trim() ||
+      !shippingProvince.trim() ||
+      !shippingCountry.trim()
+    ) {
+      toast.error("Completa la dirección de envío", {
+        description:
+          "Necesitamos dirección, código postal, ciudad, provincia y país.",
       });
       return;
     }
-    setLoading(true);
-    try {
-      const res = await startCash({
-        data: {
-          items: items.map((i) => ({
-            variantId: i.variantId,
-            quantity: i.quantity,
-            attributes: i.attributes,
-            customDesignId: i.customDesignId,
-          })),
-          customerName: cashName.trim(),
-          phone: cashPhone.trim(),
-          email: cashEmail.trim() || undefined,
-        },
+
+    if (!/^\d{5}$/.test(cp)) {
+      toast.error("Código postal no válido", {
+        description: "Introduce un código postal español de 5 cifras.",
       });
-      if ("ref" in res) {
-        window.location.href = `/checkout/exito?session_id=${encodeURIComponent(res.ref)}`;
-        return;
-      }
-      toast.error("No se pudo registrar el pedido", { description: res.error });
-    } catch (e) {
-      toast.error("No se pudo registrar el pedido", {
-        description: e instanceof Error ? e.message : undefined,
-      });
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+  }
 
+  // Punto NACEX
+  if (
+    delivery === "nacex_point" &&
+    (!nacexPostalCode.trim() || !nacexAddress.trim())
+  ) {
+    toast.error("Completa los datos de recogida NACEX", {
+      description:
+        "Necesitamos el código postal y la dirección o zona donde quieres recoger.",
+    });
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await startCheckout({
+      data: {
+        items: items.map((i) => ({
+          variantId: i.variantId,
+          quantity: i.quantity,
+          attributes: i.attributes,
+          customDesignId: i.customDesignId,
+        })),
+
+        deliveryMethod: delivery,
+
+        customerName: customerName.trim(),
+        customerEmail: customerEmail.trim(),
+        customerPhone: customerPhone.trim(),
+
+        shippingAddress:
+          delivery === "delivery" ? shippingAddress.trim() : undefined,
+        shippingPostalCode:
+          delivery === "delivery" ? shippingPostalCode.trim() : undefined,
+        shippingCity:
+          delivery === "delivery" ? shippingCity.trim() : undefined,
+        shippingProvince:
+          delivery === "delivery" ? shippingProvince.trim() : undefined,
+        shippingCountry:
+          delivery === "delivery" ? shippingCountry.trim() : undefined,
+
+        nacexPostalCode:
+          delivery === "nacex_point" ? nacexPostalCode.trim() : undefined,
+        nacexAddress:
+          delivery === "nacex_point" ? nacexAddress.trim() : undefined,
+
+        origin: window.location.origin,
+      },
+    });
+
+    if ("url" in res) {
+      window.location.href = res.url;
+      return;
+    }
+
+    toast.error(res.error ?? "No se pudo iniciar el pago.");
+  } catch (error) {
+    console.error(error);
+    toast.error("No se pudo iniciar el pago", {
+      description: "Inténtalo de nuevo.",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+  // Recogida en tienda + pago en efectivo: registra el pedido sin pasar por Stripe.
+  const onCashOrder = async () => {
+  if (!customerName.trim() || !customerPhone.trim()) {
+    toast.error("Completa tus datos", {
+      description: "Necesitamos tu nombre y teléfono para preparar tu pedido.",
+    });
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const res = await startCash({
+      data: {
+        items: items.map((i) => ({
+          variantId: i.variantId,
+          quantity: i.quantity,
+          attributes: i.attributes,
+          customDesignId: i.customDesignId,
+        })),
+        customerName: customerName.trim(),
+        phone: customerPhone.trim(),
+        email: customerEmail.trim() || undefined,
+      },
+    });
+
+    if ("ref" in res) {
+      window.location.href = `/checkout/exito?session_id=${encodeURIComponent(res.ref)}`;
+      return;
+    }
+
+    toast.error("No se pudo registrar el pedido", {
+      description: res.error,
+    });
+  } catch (e) {
+    toast.error("No se pudo registrar el pedido", {
+      description: e instanceof Error ? e.message : undefined,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
   const isCash = delivery === "pickup" && payMethod === "cash";
-
   const currency = items[0]?.price.currencyCode ?? "EUR";
   const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
   const shipping =
   delivery === "pickup"
     ? 0
-    : subtotal >= thresholdEur
-      ? 0
-      : delivery === "nacex_point"
-        ? nacexEur
-        : flatEur;
-  const total = subtotal + shipping;
-  const missingForFree = delivery === "delivery" ? Math.max(0, thresholdEur - subtotal) : 0;
+    : delivery === "nacex_point"
+      ? 4.99
+      : /^07\d{3}$/.test(shippingPostalCode.trim())
+        ? 17.99
+        : 7.99;
+
+   const total = subtotal + shipping;
 
   if (items.length === 0) {
     return (
@@ -259,8 +323,8 @@ function CheckoutPage() {
                     <Truck className="h-4 w-4" strokeWidth={1.5} /> Envío a domicilio
                   </span>
                   <span className="mt-1 block text-xs text-muted-foreground">
-                    {formatPrice(flatEur, currency)} · Gratis desde {formatPrice(thresholdEur, currency)}
-                  </span>
+                   7,99 € · Envío a domicilio
+                </span>
                 </span>
               </label>
               <label
@@ -280,8 +344,8 @@ function CheckoutPage() {
                     <Truck className="h-4 w-4" strokeWidth={1.5} /> Recogida en punto NACEX
                   </span>
                   <span className="mt-1 block text-xs text-muted-foreground">
-                    {formatPrice(nacexEur, currency)} · Gratis desde {formatPrice(thresholdEur, currency)}
-                  </span>
+                                    4,99 € · Recogida en punto NACEX
+                </span>
                 </span>
               </label>
               <label
@@ -306,7 +370,120 @@ function CheckoutPage() {
                 </span>
               </label>
             </div>
+{/* Datos del cliente */}
+<div className="mt-5 border-t border-border/60 pt-5">
+  <p className="mb-4 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+    Tus datos
+  </p>
 
+  <div className="space-y-3">
+    <div>
+      <label className="mb-1 block text-xs font-medium">
+        Nombre y apellidos *
+      </label>
+      <Input
+        value={customerName}
+        onChange={(e) => setCustomerName(e.target.value)}
+        placeholder="Tu nombre y apellidos"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-xs font-medium">
+        Email *
+      </label>
+      <Input
+        type="email"
+        value={customerEmail}
+        onChange={(e) => setCustomerEmail(e.target.value)}
+        placeholder="tu@email.com"
+      />
+    </div>
+
+    <div>
+      <label className="mb-1 block text-xs font-medium">
+        Teléfono *
+      </label>
+      <Input
+        type="tel"
+        value={customerPhone}
+        onChange={(e) => setCustomerPhone(e.target.value)}
+        placeholder="Tu teléfono"
+      />
+    </div>
+  </div>
+
+  {delivery === "delivery" && (
+    <div className="mt-5 border-t border-border/60 pt-5">
+      <p className="mb-4 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        Dirección de envío
+      </p>
+
+      <div className="space-y-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium">
+            Dirección *
+          </label>
+          <Input
+            value={shippingAddress}
+            onChange={(e) => setShippingAddress(e.target.value)}
+            placeholder="Calle, número, piso..."
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium">
+              Código postal *
+            </label>
+            <Input
+              value={shippingPostalCode}
+              onChange={(e) =>
+                setShippingPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))
+              }
+              placeholder="46100"
+              inputMode="numeric"
+              maxLength={5}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium">
+              Ciudad *
+            </label>
+            <Input
+              value={shippingCity}
+              onChange={(e) => setShippingCity(e.target.value)}
+              placeholder="Ciudad"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium">
+            Provincia *
+          </label>
+          <Input
+            value={shippingProvince}
+            onChange={(e) => setShippingProvince(e.target.value)}
+            placeholder="Provincia"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-xs font-medium">
+            País *
+          </label>
+          <Input
+            value={shippingCountry}
+            onChange={(e) => setShippingCountry(e.target.value)}
+            placeholder="España"
+          />
+        </div>
+      </div>
+    </div>
+  )}
+</div>
             {/* Recogida en tienda: elegir pagar ahora con tarjeta o en efectivo allí. */}
            {delivery === "nacex_point" && (
   <div className="mt-5 border-t border-border/60 pt-5">
@@ -441,20 +618,6 @@ function CheckoutPage() {
                   {shipping === 0 ? "Gratis" : formatPrice(shipping, currency)}
                 </span>
               </div>
-
-              {missingForFree > 0 && (
-                <p className="flex items-start gap-2 rounded-md bg-secondary/60 p-3 text-xs text-muted-foreground">
-                  <Truck className="mt-0.5 h-4 w-4 flex-shrink-0" strokeWidth={1.5} />
-                  <span>
-                    Te faltan{" "}
-                    <span className="font-medium text-espresso">
-                      {formatPrice(missingForFree, currency)}
-                    </span>{" "}
-                    para el envío gratis (desde {formatPrice(thresholdEur, currency)}).
-                  </span>
-                </p>
-              )}
-
               <div className="flex items-baseline justify-between border-t border-border/60 pt-3">
                 <span className="eyebrow">Total</span>
                 <span className="font-display text-2xl tabular-nums">

@@ -145,28 +145,41 @@ export const Route = createFileRoute("/api/stripe-webhook")({
             i.product_handle = handleById.get(i.variant_id) ?? null;
           });
         }
-        const cd = session.customer_details ?? {};
-const shipping = session.shipping_details ?? session.shipping ?? null;
+        const metadata = session.metadata ?? {};
+
+const customerName = metadata.customer_name ?? null;
+const customerEmail = metadata.customer_email ?? null;
+const customerPhone = metadata.customer_phone ?? null;
 
 const deliveryMethod =
-  session.metadata?.delivery_method === "pickup"
+  metadata.delivery_method === "pickup"
     ? "pickup"
-    : session.metadata?.delivery_method === "nacex_point"
+    : metadata.delivery_method === "nacex_point"
       ? "nacex_point"
       : "delivery";
 
 const address =
   deliveryMethod === "nacex_point"
     ? {
-        postal_code: session.metadata?.nacex_postal_code ?? "",
-        line1: session.metadata?.nacex_address ?? "",
+        postal_code: metadata.nacex_postal_code ?? "",
+        line1: metadata.nacex_address ?? "",
       }
-    : shipping?.address ?? cd.address ?? null;
+    : deliveryMethod === "delivery"
+      ? {
+          line1: metadata.shipping_address ?? "",
+          postal_code: metadata.shipping_postal_code ?? "",
+          city: metadata.shipping_city ?? "",
+          state: metadata.shipping_province ?? "",
+          country: metadata.shipping_country ?? "ES",
+        }
+      : null;
 
 const orderAddress =
   deliveryMethod === "nacex_point"
     ? address
-    : shipping ?? (address ? { address } : null);
+    : address
+      ? { address }
+      : null;
         const currency = String(session.currency ?? "eur").toUpperCase();
         const subtotalCents = session.amount_subtotal ?? 0;
         const shippingCents = session.total_details?.amount_shipping ?? 0;
@@ -179,9 +192,9 @@ const orderAddress =
             typeof session.payment_intent === "string"
               ? session.payment_intent
               : (session.payment_intent?.id ?? null),
-          _email: cd.email ?? null,
-          _name: cd.name ?? shipping?.name ?? null,
-          _phone: cd.phone ?? null,
+          _email: customerEmail,
+          _name: customerName,
+          _phone: customerPhone,
           _address: orderAddress,
           _delivery_method: deliveryMethod,
           _currency: currency,
@@ -206,10 +219,10 @@ const orderAddress =
         // Correos (solo la primera vez, no en reintentos de Stripe).
         if (!alreadyProcessed) {
           // 1) Confirmación al cliente.
-          if (cd.email) {
-            await sendOrderConfirmationEmail({
-              to: cd.email,
-              customerName: cd.name ?? null,
+          if (customerEmail) {
+        await sendOrderConfirmationEmail({
+              to: customerEmail,
+              customerName: customerName,
               items: items.map((i: any) => ({
                 title: i.title,
                 quantity: i.quantity,
@@ -242,12 +255,12 @@ const orderAddress =
               designsById = Object.fromEntries(((designs ?? []) as any[]).map((d) => [d.id, d]));
             }
             await sendAdminOrderNotification({
-              to: notifyEmail,
-              customerName: cd.name ?? null,
-              customerEmail: cd.email ?? null,
-              phone: cd.phone ?? null,
-              deliveryMethod,
-              address,
+            to: notifyEmail,
+            customerName: customerName,
+            customerEmail: customerEmail,
+            phone: customerPhone,
+            deliveryMethod,
+            address: orderAddress,
               items: items.map((i: any) => {
                 const d = i.custom_design_id ? designsById[i.custom_design_id] : null;
                 return {
