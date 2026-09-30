@@ -479,11 +479,11 @@ function CheckoutPage() {
             onChange={(e) => setShippingCountry(e.target.value)}
             placeholder="España"
           />
-        </div>
-            </div>
+           </div>
+      </div>
     </div>
-  )}
-            {/* Recogida en tienda: elegir pagar ahora con tarjeta o en efectivo allí. */}
+)}
+            {/* Recogida en tienda: elegir pagar ahora o en efectivo allí. */}
            {delivery === "nacex_point" && (
   <div className="mt-5 border-t border-border/60 pt-5">
     <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
