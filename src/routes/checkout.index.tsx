@@ -482,8 +482,6 @@ function CheckoutPage() {
         </div>
       </div>
     </div>
-  )}
-</div>
             {/* Recogida en tienda: elegir pagar ahora con tarjeta o en efectivo allí. */}
            {delivery === "nacex_point" && (
   <div className="mt-5 border-t border-border/60 pt-5">
@@ -570,8 +568,10 @@ function CheckoutPage() {
                         Reservamos tu pedido y pagas en tienda.
                       </span>
                     </span>
-                  </label>
-                </div>                 
+                </label>
+                </div>
+              </div>
+            )}
           <div className="rounded-xl border border-border/60 bg-card p-6">
             <h2 className="eyebrow mb-5">Resumen</h2>
 
@@ -616,8 +616,8 @@ function CheckoutPage() {
               {isCash
                 ? "Reservamos tu pedido; pagas en efectivo al recogerlo en tienda."
                 : "Pago seguro con tarjeta (Visa/MasterCard) gestionado por Stripe."}
-            </p>
-          </div>
+          </p>
+          </div>         
         </aside>
       </div>
     </div>
