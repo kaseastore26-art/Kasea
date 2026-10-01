@@ -31,9 +31,6 @@ function CheckoutPage() {
   const [delivery, setDelivery] = useState<DeliveryMethod>("delivery");
   // Solo aplica a recogida en tienda: pagar ahora con tarjeta o en efectivo allí.
   const [payMethod, setPayMethod] = useState<"card" | "cash">("card");
-  const [cashName, setCashName] = useState("");
-  const [cashPhone, setCashPhone] = useState("");
-  const [cashEmail, setCashEmail] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -197,7 +194,7 @@ function CheckoutPage() {
       ? 4.99
       : /^07\d{3}$/.test(shippingPostalCode.trim())
         ? 17.99
-        : 7.99;
+        : subtotal >= 55 ? 0 : 7.99;
 
    const total = subtotal + shipping;
 
@@ -478,12 +475,13 @@ function CheckoutPage() {
             value={shippingCountry}
             onChange={(e) => setShippingCountry(e.target.value)}
             placeholder="España"
-           />
+          />
+        </div>
       </div>
-     </div>
-     </div>
-     )}
-            {/* Recogida en tienda: elegir pagar ahora o en efectivo allí. */}
+    </div>
+  )}
+</div>
+            {/* Recogida en tienda: elegir pagar ahora con tarjeta o en efectivo allí. */}
            {delivery === "nacex_point" && (
   <div className="mt-5 border-t border-border/60 pt-5">
     <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -569,10 +567,13 @@ function CheckoutPage() {
                         Reservamos tu pedido y pagas en tienda.
                       </span>
                     </span>
-                </label>
+                  </label>
                 </div>
-                </div>
-                )}            
+
+              </div>
+            )}
+          </div>
+
           <div className="rounded-xl border border-border/60 bg-card p-6">
             <h2 className="eyebrow mb-5">Resumen</h2>
 
@@ -617,8 +618,8 @@ function CheckoutPage() {
               {isCash
                 ? "Reservamos tu pedido; pagas en efectivo al recogerlo en tienda."
                 : "Pago seguro con tarjeta (Visa/MasterCard) gestionado por Stripe."}
-          </p>
-          </div>         
+            </p>
+          </div>
         </aside>
       </div>
     </div>

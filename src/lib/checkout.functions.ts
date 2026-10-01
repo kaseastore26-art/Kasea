@@ -27,6 +27,7 @@ function publicClient() {
 function computeShipping(
   deliveryMethod: "delivery" | "pickup" | "nacex_point",
   postalCode?: string,
+  subtotalCents = 0,
 ): number {
   if (deliveryMethod === "pickup") return 0;
 
@@ -42,6 +43,7 @@ function computeShipping(
     return 1799;
   }
 
+    if (subtotalCents >= 5500) return 0;
   return 799;
 }
 
@@ -213,6 +215,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
    const ship = computeShipping(
   data.deliveryMethod,
   data.shippingPostalCode,
+  subtotal,
 );
 if (ship > 0) {
   lineItems.push({
