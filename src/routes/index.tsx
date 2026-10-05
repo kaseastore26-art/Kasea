@@ -111,9 +111,9 @@ function CategoryHighlights() {
           </Link>
 
           <div className="max-w-xl">
-            <p className="mb-4 text-lg font-semibold uppercase tracking-[0.18em] md:text-xl">Fundas para móvil</p>
+            <p className="mb-4 text-base font-semibold uppercase tracking-[0.18em] md:text-lg">Fundas para móvil</p>
 
-            <h2 className="font-sans font-bold text-4xl leading-tight md:text-5xl">
+            <h2 className="font-sans font-bold text-3xl leading-tight md:text-4xl">
               Belleza que protege.
             </h2>
 
@@ -129,7 +129,7 @@ function CategoryHighlights() {
 
             <Link
               to="/fundas-sublimacion"
-              className="mt-8 inline-flex items-center gap-2 border-b border-foreground pb-2 text-sm font-semibold uppercase tracking-[0.18em] md:text-base transition-all hover:gap-3"
+              className="mt-8 inline-flex items-center gap-2 border-b border-foreground pb-2 text-base font-semibold uppercase tracking-[0.18em] transition-all hover:gap-3"
             >
               Diseños exclusivos
               <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
