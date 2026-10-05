@@ -95,53 +95,46 @@ const HOME_CATEGORIES: Array<{
 ];
 
 function CategoryHighlights() {
-  const { data: overrides } = useCategoryImages();
   return (
-    <section id="categorias" className="scroll-mt-24 border-b border-border/60 bg-background">
-
+    <section id="categorias" className="border-b border-border/60 bg-background">
       <div className="container-luxe py-16 md:py-24">
-        <div className="mx-auto mb-10 max-w-2xl text-center md:mb-14">
-          <p className="eyebrow mb-3">Categorías destacadas</p>
-          <h2 className="font-display text-4xl md:text-5xl">Encuentra tu estilo de funda</h2>
-          <p className="mt-4 text-base leading-relaxed text-muted-foreground">
-            Explora nuestras colecciones y elige la funda que mejor se adapta a ti.
-          </p>
-        </div>
+        <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 lg:gap-20">
+          <Link to="/fundas-sublimacion" className="group block overflow-hidden rounded-xl">
+            <img
+              src="/brand/fundas-movil.png"
+              alt="Mujer llevando una funda Kasea"
+              loading="lazy"
+              width={1200}
+              height={1500}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+            />
+          </Link>
 
-        <div className="mx-auto grid max-w-md grid-cols-1 justify-center gap-6 md:gap-8">
-          {HOME_CATEGORIES.map((cat, i) => {
-            const picked = pickCategoryImage(overrides, cat.slug, cat.image, cat.alt);
-            return (
+          <div className="max-w-xl">
+            <p className="mb-4 text-lg font-semibold uppercase tracking-[0.18em] md:text-xl">Fundas para móvil</p>
+
+            <h2 className="font-sans font-bold text-4xl leading-tight md:text-5xl">
+              Belleza que protege.
+            </h2>
+
+            <p className="mt-6 text-base leading-relaxed text-foreground/80 md:text-lg">
+              No solo son preciosas, también son súper protectoras.
+              La combinación perfecta entre diseño y durabilidad.
+            </p>
+
+            <p className="mt-4 text-base leading-relaxed text-foreground/80 md:text-lg">
+              Finas, ligeras y resistentes, para proteger tu móvil sin
+              hacerlo más voluminoso.
+            </p>
+
             <Link
-              key={cat.to}
-              to={cat.to}
-              style={{ animationDelay: `${i * 120}ms` }}
-              className="group relative block overflow-hidden rounded-xl border border-border/60 bg-card shadow-[var(--shadow-soft)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[var(--shadow-elevated)] animate-fade-in"
+              to="/fundas-sublimacion"
+              className="mt-8 inline-flex items-center gap-2 border-b border-foreground pb-2 text-sm font-semibold uppercase tracking-[0.18em] md:text-base transition-all hover:gap-3"
             >
-              <div className="relative aspect-[4/5] overflow-hidden sm:aspect-[3/4] lg:aspect-[4/5]">
-                <img
-                  src={picked.url}
-                  alt={picked.alt}
-                  loading="lazy"
-                  width={1200}
-                  height={1500}
-                  className="h-full w-full object-cover transition-transform duration-[900ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(20,15,10,0.72)_0%,rgba(20,15,10,0.15)_45%,transparent_75%)]" />
-
-                <div className="absolute inset-x-0 bottom-0 p-6 md:p-7 text-white">
-                  {cat.subtitle && <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-white/75">{cat.subtitle}</p>}
-                  <h3 className={cat.subtitle ? "mt-2 font-display text-2xl leading-tight md:text-[1.75rem]" : "font-display text-2xl leading-tight md:text-[1.75rem]"}>
-                    {cat.title}
-                  </h3>
-                  <span className="mt-4 inline-flex items-center gap-2 text-xs font-medium uppercase tracking-[0.18em] text-white/90 transition-all group-hover:gap-3">
-                    Ver colección <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
-                  </span>
-                </div>
-              </div>
+              Diseños exclusivos
+              <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>
-            );
-          })}
+          </div>
         </div>
       </div>
     </section>
