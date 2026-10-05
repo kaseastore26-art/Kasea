@@ -24,6 +24,7 @@ export function SiteHeader() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [hideOnScroll, setHideOnScroll] = useState(false);
   const favCount = useFavoritesStore((s) => s.items.length);
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -55,9 +56,34 @@ export function SiteHeader() {
     return () => { active = false; sub.subscription.unsubscribe(); };
   }, []);
 
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+
+      if (currentScrollY <= 20) {
+        setHideOnScroll(false);
+      } else if (currentScrollY > lastScrollY + 4) {
+        setHideOnScroll(true);
+      } else if (currentScrollY < lastScrollY - 4) {
+        setHideOnScroll(false);
+      }
+
+      lastScrollY = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/88 backdrop-blur-xl">
-      <div className="container-luxe relative flex min-h-[7.5rem] items-center justify-between gap-4 py-3 md:min-h-[8.5rem] md:py-4">
+    <header
+      className={`sticky top-0 z-40 border-b border-border/60 bg-background/88 backdrop-blur-xl transition-transform duration-300 ${
+        hideOnScroll ? "-translate-y-full" : "translate-y-0"
+      }`}
+    >
+      <div className="container-luxe relative flex min-h-[6rem] items-center justify-between gap-4 py-3 md:min-h-[6.5rem] md:py-4">
         <div className="flex items-center gap-2 md:hidden">
           <Button variant="ghost" size="icon" onClick={() => setOpen(!open)} aria-label="Abrir menú">
             {open ? <X className="h-5 w-5" strokeWidth={1.5} /> : <Menu className="h-5 w-5" strokeWidth={1.5} />}
