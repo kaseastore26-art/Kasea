@@ -215,13 +215,13 @@ function Hero() {
         <div className="container-luxe relative grid min-h-[92svh] items-end py-20 md:grid-cols-[1.1fr_0.9fr]">
           <div className="max-w-2xl pb-12">
             <p className="eyebrow mt-8">&nbsp;</p>
-            <h1 className="mt-4 max-w-3xl font-display text-6xl font-bold leading-[1.02] tracking-[-0.01em] lg:text-[4.6rem]">
+            <h1 className="mt-4 max-w-3xl font-display text-6xl font-bold text-black leading-[1.02] tracking-[-0.01em] lg:text-[4.6rem]">
               {content.hero_title_line1}
               <br />
               <span className="italic font-normal">{content.hero_title_line2}</span>
             </h1>
 
-            <p className="mt-6 max-w-xl text-lg leading-relaxed text-foreground/90">
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-black">
               {content.hero_intro}
             </p>
             <div className="mt-10 flex flex-wrap gap-3">
