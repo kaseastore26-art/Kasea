@@ -113,7 +113,7 @@ function CategoryHighlights() {
           <div className="max-w-xl">
             <p className="mb-4 text-base font-semibold uppercase tracking-[0.18em] md:text-lg">Fundas para móvil</p>
 
-            <h2 className="font-sans font-bold text-3xl leading-tight md:text-4xl">
+            <h2 className="font-display text-5xl leading-tight md:text-7xl lg:text-8xl">
               Belleza que protege.
             </h2>
 
