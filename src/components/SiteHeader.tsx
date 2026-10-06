@@ -12,6 +12,7 @@ import { useFavoritesStore } from "@/lib/favorites";
 const NAV = [
   { to: "/", label: "Inicio" },
   { to: "/fundas", label: "Fundas" },
+  { to: "/accesorios", label: "Accesorios" },
   { to: "/mas-vendido", label: "Lo más vendido" },
   { to: "/contacto", label: "Contacto" },
 ];
