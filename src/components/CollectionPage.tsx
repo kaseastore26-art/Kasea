@@ -16,6 +16,7 @@ interface Props {
   // de colección). "collection" = solo los productos enlazados a la colección.
   source?: "collection" | "all";
   includeTags?: string[];
+  excludeTags?: string[];
 }
 
 function ProductCard({ product, collectionHandle }: { product: ShopifyProduct; collectionHandle: string }) {
@@ -71,7 +72,7 @@ function ProductCard({ product, collectionHandle }: { product: ShopifyProduct; c
   );
 }
 
-export function CollectionPage({ collectionHandle, eyebrow, title, intro, source = "collection", includeTags }: Props) {
+export function CollectionPage({ collectionHandle, eyebrow, title, intro, source = "collection", includeTags, excludeTags }: Props) {
   const collectionFn = useServerFn(getCollectionProductsPublic);
   const allFn = useServerFn(getProductsPublic);
   const { data, isLoading } = useQuery({
@@ -90,7 +91,12 @@ export function CollectionPage({ collectionHandle, eyebrow, title, intro, source
 
   // El orden lo define products.position (las flechas del panel), ya aplicado en
   // el servidor tanto por getProductsPublic como por getCollectionProductsPublic.
-  const products = (data?.products ?? []).filter((product) => !includeTags || includeTags.some((tag) => product.node.tags?.includes(tag)));
+  const products = (data?.products ?? []).filter((product) => {
+    const tags = product.node.tags ?? [];
+    const matchesInclude = !includeTags || includeTags.some((tag) => tags.includes(tag));
+    const matchesExclude = !excludeTags || !tags.some((tag) => excludeTags.includes(tag));
+    return matchesInclude && matchesExclude;
+  });
 
 
   return (
