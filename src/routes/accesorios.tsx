@@ -126,6 +126,7 @@ function AccessoriesPage() {
 
   return (
     <div className="container-luxe py-16 md:py-24">
+      {isAccessoriesRoot && (
       <header className="mx-auto mb-14 max-w-3xl text-center">
         <p className="eyebrow mb-3">Colección</p>
 
@@ -138,6 +139,7 @@ function AccessoriesPage() {
           que combinan diseño, utilidad y estilo Kasea.
         </p>
       </header>
+      )}
 
       {isAccessoriesRoot && (
       <section className="mb-20 grid grid-cols-1 gap-6 md:grid-cols-3">
