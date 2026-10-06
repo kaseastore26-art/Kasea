@@ -71,9 +71,12 @@ function FundasPage() {
     queryKey: ["fundas", sort],
     queryFn: async () => {
       const all = (await productsFn()) as FundaNode[];
-      // La tienda vende solo fundas → mostramos todo el catálogo activo (sin
-      // filtros por tag/colección que ocultarían productos nuevos del panel).
-      return sortFundas(all, sort);
+      // Fundas: solo productos etiquetados como sublimación o transparentes.
+      const fundas = all.filter((p) => {
+        const tags = p.node.tags ?? [];
+        return tags.includes("sublimacion") || tags.includes("transparentes");
+      });
+      return sortFundas(fundas, sort);
     },
   });
 
