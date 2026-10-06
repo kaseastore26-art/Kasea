@@ -16,6 +16,7 @@ import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as PersonalizarRouteImport } from './routes/personalizar'
 import { Route as NuevaContrasenaRouteImport } from './routes/nueva-contrasena'
 import { Route as MisPedidosRouteImport } from './routes/mis-pedidos'
+import { Route as MetaProductsDotcsvRouteImport } from './routes/meta-products[.]csv'
 import { Route as MasVendidoRouteImport } from './routes/mas-vendido'
 import { Route as FundasSublimacionRouteImport } from './routes/fundas-sublimacion'
 import { Route as FundasMovilRouteImport } from './routes/fundas-movil'
@@ -23,6 +24,7 @@ import { Route as FundasRouteImport } from './routes/fundas'
 import { Route as FavoritosRouteImport } from './routes/favoritos'
 import { Route as ContactoRouteImport } from './routes/contacto'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AccesoriosRouteImport } from './routes/accesorios'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout.index'
@@ -31,6 +33,7 @@ import { Route as CheckoutExitoRouteImport } from './routes/checkout.exito'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedAdminStockFundasRouteImport } from './routes/_authenticated/admin.stock-fundas'
 import { Route as AuthenticatedAdminProductosRouteImport } from './routes/_authenticated/admin.productos'
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated/admin.pedidos'
 import { Route as AuthenticatedAdminCuentaRouteImport } from './routes/_authenticated/admin.cuenta'
@@ -74,6 +77,11 @@ const MisPedidosRoute = MisPedidosRouteImport.update({
   path: '/mis-pedidos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MetaProductsDotcsvRoute = MetaProductsDotcsvRouteImport.update({
+  id: '/meta-products.csv',
+  path: '/meta-products.csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MasVendidoRoute = MasVendidoRouteImport.update({
   id: '/mas-vendido',
   path: '/mas-vendido',
@@ -107,6 +115,11 @@ const ContactoRoute = ContactoRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccesoriosRoute = AccesoriosRouteImport.update({
+  id: '/accesorios',
+  path: '/accesorios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
@@ -148,6 +161,12 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminStockFundasRoute =
+  AuthenticatedAdminStockFundasRouteImport.update({
+    id: '/stock-fundas',
+    path: '/stock-fundas',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminProductosRoute =
   AuthenticatedAdminProductosRouteImport.update({
     id: '/productos',
@@ -193,6 +212,7 @@ const AuthenticatedAdminAjustesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/accesorios': typeof AccesoriosRoute
   '/auth': typeof AuthRoute
   '/contacto': typeof ContactoRoute
   '/favoritos': typeof FavoritosRoute
@@ -200,6 +220,7 @@ export interface FileRoutesByFullPath {
   '/fundas-movil': typeof FundasMovilRoute
   '/fundas-sublimacion': typeof FundasSublimacionRoute
   '/mas-vendido': typeof MasVendidoRoute
+  '/meta-products.csv': typeof MetaProductsDotcsvRoute
   '/mis-pedidos': typeof MisPedidosRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/personalizar': typeof PersonalizarRoute
@@ -219,10 +240,12 @@ export interface FileRoutesByFullPath {
   '/admin/cuenta': typeof AuthenticatedAdminCuentaRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
+  '/admin/stock-fundas': typeof AuthenticatedAdminStockFundasRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/accesorios': typeof AccesoriosRoute
   '/auth': typeof AuthRoute
   '/contacto': typeof ContactoRoute
   '/favoritos': typeof FavoritosRoute
@@ -230,6 +253,7 @@ export interface FileRoutesByTo {
   '/fundas-movil': typeof FundasMovilRoute
   '/fundas-sublimacion': typeof FundasSublimacionRoute
   '/mas-vendido': typeof MasVendidoRoute
+  '/meta-products.csv': typeof MetaProductsDotcsvRoute
   '/mis-pedidos': typeof MisPedidosRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/personalizar': typeof PersonalizarRoute
@@ -248,12 +272,14 @@ export interface FileRoutesByTo {
   '/admin/cuenta': typeof AuthenticatedAdminCuentaRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
+  '/admin/stock-fundas': typeof AuthenticatedAdminStockFundasRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/accesorios': typeof AccesoriosRoute
   '/auth': typeof AuthRoute
   '/contacto': typeof ContactoRoute
   '/favoritos': typeof FavoritosRoute
@@ -261,6 +287,7 @@ export interface FileRoutesById {
   '/fundas-movil': typeof FundasMovilRoute
   '/fundas-sublimacion': typeof FundasSublimacionRoute
   '/mas-vendido': typeof MasVendidoRoute
+  '/meta-products.csv': typeof MetaProductsDotcsvRoute
   '/mis-pedidos': typeof MisPedidosRoute
   '/nueva-contrasena': typeof NuevaContrasenaRoute
   '/personalizar': typeof PersonalizarRoute
@@ -280,12 +307,14 @@ export interface FileRoutesById {
   '/_authenticated/admin/cuenta': typeof AuthenticatedAdminCuentaRoute
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/productos': typeof AuthenticatedAdminProductosRoute
+  '/_authenticated/admin/stock-fundas': typeof AuthenticatedAdminStockFundasRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/accesorios'
     | '/auth'
     | '/contacto'
     | '/favoritos'
@@ -293,6 +322,7 @@ export interface FileRouteTypes {
     | '/fundas-movil'
     | '/fundas-sublimacion'
     | '/mas-vendido'
+    | '/meta-products.csv'
     | '/mis-pedidos'
     | '/nueva-contrasena'
     | '/personalizar'
@@ -312,10 +342,12 @@ export interface FileRouteTypes {
     | '/admin/cuenta'
     | '/admin/pedidos'
     | '/admin/productos'
+    | '/admin/stock-fundas'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/accesorios'
     | '/auth'
     | '/contacto'
     | '/favoritos'
@@ -323,6 +355,7 @@ export interface FileRouteTypes {
     | '/fundas-movil'
     | '/fundas-sublimacion'
     | '/mas-vendido'
+    | '/meta-products.csv'
     | '/mis-pedidos'
     | '/nueva-contrasena'
     | '/personalizar'
@@ -341,11 +374,13 @@ export interface FileRouteTypes {
     | '/admin/cuenta'
     | '/admin/pedidos'
     | '/admin/productos'
+    | '/admin/stock-fundas'
     | '/admin'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/accesorios'
     | '/auth'
     | '/contacto'
     | '/favoritos'
@@ -353,6 +388,7 @@ export interface FileRouteTypes {
     | '/fundas-movil'
     | '/fundas-sublimacion'
     | '/mas-vendido'
+    | '/meta-products.csv'
     | '/mis-pedidos'
     | '/nueva-contrasena'
     | '/personalizar'
@@ -372,12 +408,14 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/cuenta'
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/productos'
+    | '/_authenticated/admin/stock-fundas'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AccesoriosRoute: typeof AccesoriosRoute
   AuthRoute: typeof AuthRoute
   ContactoRoute: typeof ContactoRoute
   FavoritosRoute: typeof FavoritosRoute
@@ -385,6 +423,7 @@ export interface RootRouteChildren {
   FundasMovilRoute: typeof FundasMovilRoute
   FundasSublimacionRoute: typeof FundasSublimacionRoute
   MasVendidoRoute: typeof MasVendidoRoute
+  MetaProductsDotcsvRoute: typeof MetaProductsDotcsvRoute
   MisPedidosRoute: typeof MisPedidosRoute
   NuevaContrasenaRoute: typeof NuevaContrasenaRoute
   PersonalizarRoute: typeof PersonalizarRoute
@@ -449,6 +488,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MisPedidosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/meta-products.csv': {
+      id: '/meta-products.csv'
+      path: '/meta-products.csv'
+      fullPath: '/meta-products.csv'
+      preLoaderRoute: typeof MetaProductsDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mas-vendido': {
       id: '/mas-vendido'
       path: '/mas-vendido'
@@ -496,6 +542,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/accesorios': {
+      id: '/accesorios'
+      path: '/accesorios'
+      fullPath: '/accesorios'
+      preLoaderRoute: typeof AccesoriosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -552,6 +605,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/stock-fundas': {
+      id: '/_authenticated/admin/stock-fundas'
+      path: '/stock-fundas'
+      fullPath: '/admin/stock-fundas'
+      preLoaderRoute: typeof AuthenticatedAdminStockFundasRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/admin/productos': {
@@ -614,6 +674,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminCuentaRoute: typeof AuthenticatedAdminCuentaRoute
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
   AuthenticatedAdminProductosRoute: typeof AuthenticatedAdminProductosRoute
+  AuthenticatedAdminStockFundasRoute: typeof AuthenticatedAdminStockFundasRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
@@ -625,6 +686,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminCuentaRoute: AuthenticatedAdminCuentaRoute,
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
   AuthenticatedAdminProductosRoute: AuthenticatedAdminProductosRoute,
+  AuthenticatedAdminStockFundasRoute: AuthenticatedAdminStockFundasRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
@@ -645,6 +707,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AccesoriosRoute: AccesoriosRoute,
   AuthRoute: AuthRoute,
   ContactoRoute: ContactoRoute,
   FavoritosRoute: FavoritosRoute,
@@ -652,6 +715,7 @@ const rootRouteChildren: RootRouteChildren = {
   FundasMovilRoute: FundasMovilRoute,
   FundasSublimacionRoute: FundasSublimacionRoute,
   MasVendidoRoute: MasVendidoRoute,
+  MetaProductsDotcsvRoute: MetaProductsDotcsvRoute,
   MisPedidosRoute: MisPedidosRoute,
   NuevaContrasenaRoute: NuevaContrasenaRoute,
   PersonalizarRoute: PersonalizarRoute,

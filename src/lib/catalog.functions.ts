@@ -161,6 +161,23 @@ export const getBestSellingPublic = createServerFn({ method: "GET" }).handler(as
   );
 });
 
+// -------- Accesorios públicos --------
+// Muestra únicamente productos activos de las categorías de accesorios.
+export const getAccessoriesProductsPublic = createServerFn({ method: "GET" }).handler(async () => {
+  const supabase = publicClient();
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_SELECT)
+    .eq("status", "active")
+    .eq("is_custom", false)
+    .overlaps("tags", ["colgantes", "protectores", "cargadores"])
+    .order("position", { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as unknown as ProductRow[]).map(rowToShopifyProduct);
+});
+
 // -------- Ajustes públicos de la tienda (regla de envío, editable en admin) --------
 export const getShopSettingsPublic = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = publicClient();
