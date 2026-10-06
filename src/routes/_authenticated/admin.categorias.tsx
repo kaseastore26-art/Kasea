@@ -78,7 +78,7 @@ function CategoriesAdmin() {
       <div className="mb-6">
         <h2 className="font-display text-2xl">Imágenes de categorías</h2>
         <p className="text-sm text-muted-foreground">
-          Esta es la imagen de categoría que aparece en la home y en la página de Fundas.
+          Estas son las imágenes de categoría que aparecen en la tienda y en la sección de Accesorios.
         </p>
       </div>
 
