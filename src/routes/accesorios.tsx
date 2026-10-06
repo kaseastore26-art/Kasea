@@ -179,23 +179,6 @@ function AccessoriesPage() {
         })}
       </section>
 
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {categories.map((category) => (
-          <Link
-            key={category.slug}
-            to={`/accesorios/${category.slug}`}
-            className="group rounded-xl border border-border bg-card p-6 text-center transition-colors hover:bg-secondary"
-          >
-            <p className="font-display text-3xl">{category.title}</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {category.description}
-            </p>
-            <span className="mt-5 inline-block text-xs font-semibold uppercase tracking-[0.14em]">
-              Ver productos →
-            </span>
-          </Link>
-        ))}
-      </section>
     </div>
   );
 }
