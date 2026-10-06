@@ -108,30 +108,44 @@ useEffect(() => {
   // Las fundas y protectores necesitan modelo de iPhone.
   // Los accesorios genéricos (accesorios, colgantes y cargadores) no.
   const productTags = p.tags ?? [];
+  const isProtector = productTags.includes("protectores");
+
   const isGenericAccessory =
     productTags.includes("accesorios") ||
     productTags.includes("colgantes") ||
     productTags.includes("cargadores");
 
   const needsModelSelector = !isGenericAccessory;
-    const caseStockFn = useServerFn(getCaseModelStockPublic);
+  const useCaseModelStock = needsModelSelector && !isProtector;
+
+  const caseStockFn = useServerFn(getCaseModelStockPublic);
 
   const { data: caseModelStock = {}, isLoading: caseStockLoading } = useQuery({
     queryKey: ["case-model-stock"],
     queryFn: () => caseStockFn(),
     staleTime: 30_000,
-    enabled: needsModelSelector,
+    enabled: useCaseModelStock,
   });
 
-  const selectedModelStock = needsModelSelector && selectedModel
+  const selectedModelStock = useCaseModelStock && selectedModel
     ? Number(caseModelStock[selectedModel] ?? 0)
     : 0;
 
+  const variantStock = Number(variant?.stock ?? 0);
+
   const modelOutOfStock =
-    needsModelSelector && Boolean(selectedModel) && selectedModelStock <= 0;
+    useCaseModelStock
+      ? Boolean(selectedModel) && selectedModelStock <= 0
+      : needsModelSelector && Boolean(selectedModel) && variantStock <= 0;
 
   const modelStockExceeded =
-    needsModelSelector && Boolean(selectedModel) && qty > selectedModelStock;
+    useCaseModelStock
+      ? Boolean(selectedModel) && qty > selectedModelStock
+      : needsModelSelector && Boolean(selectedModel) && qty > variantStock;
+
+  const effectiveModelStock = useCaseModelStock
+    ? selectedModelStock
+    : variantStock;
 
   const productsFn = useServerFn(getProductsPublic);
   const { data: related = [] } = useQuery({
@@ -273,7 +287,7 @@ if (typeof fbq === "function") {
   );
 })}
       </select>
-      {!caseStockLoading && modelOutOfStock && (
+      {(!useCaseModelStock || !caseStockLoading) && modelOutOfStock && (
   <p className="mt-3 text-sm text-red-600">
     🔴 <strong>{selectedModel} sin stock</strong>
     <br />
@@ -284,9 +298,9 @@ if (typeof fbq === "function") {
   </p>
 )}
 
-{!caseStockLoading && selectedModel && selectedModelStock > 0 && (
+{(!useCaseModelStock || !caseStockLoading) && selectedModel && effectiveModelStock > 0 && (
   <p className="mt-2 text-xs text-muted-foreground">
-    {selectedModelStock} {selectedModelStock === 1 ? "unidad disponible" : "unidades disponibles"}
+    {effectiveModelStock} {effectiveModelStock === 1 ? "unidad disponible" : "unidades disponibles"}
   </p>
 )}
     </div>
@@ -308,8 +322,8 @@ if (typeof fbq === "function") {
               <button
   onClick={() =>
     setQty((current) =>
-      selectedModelStock > 0
-        ? Math.min(current + 1, selectedModelStock)
+      effectiveModelStock > 0
+        ? Math.min(current + 1, effectiveModelStock)
         : current
     )
   }
@@ -330,7 +344,7 @@ if (typeof fbq === "function") {
               disabled={
   isLoading ||
   !inStock ||
-  (needsModelSelector && (caseStockLoading || !selectedModel || modelOutOfStock || modelStockExceeded))
+  (needsModelSelector && ((useCaseModelStock && caseStockLoading) || !selectedModel || modelOutOfStock || modelStockExceeded))
 }
               className="w-full h-14 rounded-none border-espresso text-espresso hover:bg-secondary tracking-[0.2em] uppercase text-xs"
             >
@@ -341,7 +355,7 @@ if (typeof fbq === "function") {
               disabled={
   isLoading ||
   !inStock ||
-  (needsModelSelector && (caseStockLoading || !selectedModel || modelOutOfStock || modelStockExceeded))
+  (needsModelSelector && ((useCaseModelStock && caseStockLoading) || !selectedModel || modelOutOfStock || modelStockExceeded))
 }
               style={{ backgroundColor: "#000", color: "#fff" }}
               className="w-full h-14 rounded-none hover:opacity-90 tracking-[0.2em] uppercase text-xs disabled:opacity-100 disabled:cursor-not-allowed"
