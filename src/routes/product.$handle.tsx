@@ -105,21 +105,15 @@ useEffect(() => {
   const isLoading = useCartStore((s) => s.isLoading);
   const navigate = useNavigate();
 
-  // Solo fundas y protectores necesitan seleccionar modelo de iPhone.
-  // Colgantes y cargadores son productos genéricos.
+  // Las fundas y protectores necesitan modelo de iPhone.
+  // Los accesorios genéricos (accesorios, colgantes y cargadores) no.
   const productTags = p.tags ?? [];
   const isGenericAccessory =
+    productTags.includes("accesorios") ||
     productTags.includes("colgantes") ||
     productTags.includes("cargadores");
 
-  const needsModelSelector =
-    !isGenericAccessory &&
-    (
-      productTags.includes("sublimacion") ||
-      productTags.includes("transparentes") ||
-      productTags.includes("protectores") ||
-      productTags.includes("fundas")
-    );
+  const needsModelSelector = !isGenericAccessory;
     const caseStockFn = useServerFn(getCaseModelStockPublic);
 
   const { data: caseModelStock = {}, isLoading: caseStockLoading } = useQuery({
