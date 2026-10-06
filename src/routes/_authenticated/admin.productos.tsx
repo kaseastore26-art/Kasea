@@ -128,6 +128,7 @@ interface FormState {
   status: "active" | "draft" | "archived";
   imageUrl: string;
   isCustom: boolean;
+  category: "accesorios" | "colgantes" | "protectores" | "cargadores" | "";
 }
 
 const EMPTY: FormState = {
@@ -138,6 +139,7 @@ const EMPTY: FormState = {
   status: "active",
   imageUrl: "",
   isCustom: false,
+  category: "",
 };
 
 function AdminProductos() {
@@ -174,6 +176,7 @@ function AdminProductos() {
       status: p.status as FormState["status"],
       imageUrl: p.imageUrl,
       isCustom: p.isCustom,
+      category: (p.tags?.[0] ?? "") as FormState["category"],
     });
     setOpen(true);
   }
@@ -210,6 +213,7 @@ function AdminProductos() {
           stock: parseInt(form.stock, 10) || 0,
           status: form.status,
           imageUrl: form.imageUrl,
+          tags: form.category ? [form.category] : [],
         },
       });
       await qc.invalidateQueries({ queryKey: ["admin-products"] });
@@ -446,6 +450,21 @@ function AdminProductos() {
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
+            </div>
+            <div>
+              <Label htmlFor="p-category">Categoría</Label>
+              <select
+                id="p-category"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value as FormState["category"] })}
+              >
+                <option value="">Sin categoría</option>
+                <option value="accesorios">Accesorios</option>
+                <option value="colgantes">Colgantes</option>
+                <option value="protectores">Protectores</option>
+                <option value="cargadores">Cargadores</option>
+              </select>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>

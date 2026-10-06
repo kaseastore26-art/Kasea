@@ -161,7 +161,7 @@ export const saveProductOrder = createServerFn({ method: "POST" })
   });
 
 // -------- Category images (home + /fundas cards) --------
-const CATEGORY_SLUGS = ["transparentes", "sublimacion"] as const;
+const CATEGORY_SLUGS = ["transparentes", "sublimacion", "colgantes", "protectores", "cargadores"] as const;
 const CategorySlugSchema = z.enum(CATEGORY_SLUGS);
 
 export const listCategoryImagesPublic = createServerFn({ method: "GET" }).handler(async () => {

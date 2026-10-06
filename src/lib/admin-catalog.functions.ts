@@ -43,6 +43,7 @@ export interface AdminProduct {
   priceCents: number;
   stock: number;
   imageUrl: string;
+  tags: string[];
 }
 
 // -------- Listado de productos (incluye borradores) --------
@@ -53,7 +54,7 @@ export const listProductsAdmin = createServerFn({ method: "GET" })
     await assertAdmin(ctx);
     const { data, error } = await (ctx.supabase as any)
       .from("products")
-      .select("id, handle, title, description, status, is_custom, position, product_variants(id, price_cents, stock, position), product_images(url, position)")
+      .select("id, handle, title, description, tags, status, is_custom, position, product_variants(id, price_cents, stock, position), product_images(url, position)")
       .order("position", { ascending: true });
     if (error) throw new Error(error.message);
     return ((data ?? []) as any[]).map((p): AdminProduct => {
@@ -64,6 +65,7 @@ export const listProductsAdmin = createServerFn({ method: "GET" })
         handle: p.handle,
         title: p.title,
         description: p.description ?? "",
+        tags: p.tags ?? [],
         status: p.status,
         isCustom: p.is_custom,
         priceCents: variant?.price_cents ?? 0,
@@ -81,6 +83,7 @@ const UpsertSchema = z.object({
   stock: z.number().int().nonnegative(),
   status: z.enum(["active", "draft", "archived"]).default("active"),
   imageUrl: z.string().default(""),
+  tags: z.array(z.string()).default([]),
 });
 
 // -------- Crear / editar producto (con su variante e imagen) --------
@@ -98,7 +101,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
     if (productId) {
       const { error } = await supabase
         .from("products")
-        .update({ title: data.title, description: data.description, status: data.status })
+        .update({ title: data.title, description: data.description, status: data.status, tags: data.tags ?? [] })
         .eq("id", productId);
       if (error) throw new Error(error.message);
     } else {
@@ -108,7 +111,7 @@ export const upsertProduct = createServerFn({ method: "POST" })
       if (exists) handle = `${handle}-${crypto.randomUUID().slice(0, 4)}`;
       const { data: created, error } = await supabase
         .from("products")
-        .insert({ handle, title: data.title, description: data.description, status: data.status })
+        .insert({ handle, title: data.title, description: data.description, status: data.status, tags: data.tags ?? [] })
         .select("id")
         .single();
       if (error) throw new Error(error.message);

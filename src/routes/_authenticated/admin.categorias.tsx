@@ -17,7 +17,7 @@ import { listCategoryImagesPublic, saveCategoryImage } from "@/lib/admin.functio
 import { pickFile, uploadImage } from "@/lib/admin-upload";
 import catSublimacion from "@/assets/cat-sublimacion.jpg";
 
-type Slug = "transparentes" | "sublimacion";
+type Slug = "transparentes" | "sublimacion" | "colgantes" | "protectores" | "cargadores";
 
 const CATEGORIES: Array<{
   slug: Slug;
@@ -32,6 +32,27 @@ const CATEGORIES: Array<{
     route: "/fundas-sublimacion",
     fallback: catSublimacion,
     defaultAlt: "Funda para sublimación con pinceles y paleta de color",
+  },
+  {
+    slug: "colgantes",
+    title: "Colgantes",
+    route: "/accesorios",
+    fallback: catSublimacion,
+    defaultAlt: "Colgantes para móvil",
+  },
+  {
+    slug: "protectores",
+    title: "Protectores",
+    route: "/accesorios",
+    fallback: catSublimacion,
+    defaultAlt: "Protectores para móvil",
+  },
+  {
+    slug: "cargadores",
+    title: "Cargadores",
+    route: "/accesorios",
+    fallback: catSublimacion,
+    defaultAlt: "Cargadores para móvil",
   },
 ];
 
