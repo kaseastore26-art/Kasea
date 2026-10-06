@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Eye, Package } from "lucide-react";
@@ -97,6 +97,8 @@ function AccessoriesPage() {
   });
 
   const products = data ?? [];
+  const { pathname } = useLocation();
+  const isAccessoriesRoot = pathname === "/accesorios";
 
   const imageMap = new Map(
     (categoryImages ?? []).map((item) => [item.slug, item]),
@@ -137,6 +139,7 @@ function AccessoriesPage() {
         </p>
       </header>
 
+      {isAccessoriesRoot && (
       <section className="mb-20 grid grid-cols-1 gap-6 md:grid-cols-3">
         {categories.map((category) => {
           const image = imageMap.get(category.slug);
@@ -178,6 +181,7 @@ function AccessoriesPage() {
           );
         })}
       </section>
+      )}
 
       <Outlet />
     </div>
