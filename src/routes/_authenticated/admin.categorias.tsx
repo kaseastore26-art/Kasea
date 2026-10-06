@@ -132,6 +132,7 @@ function CategoryCard({
   const [editing, setEditing] = useState(false);
   const [altValue, setAltValue] = useState(alt);
   const [titleValue, setTitleValue] = useState(overrideTitle);
+  const [descriptionValue, setDescriptionValue] = useState("");
 
   useEffect(() => {
     setAltValue(alt);
@@ -139,7 +140,7 @@ function CategoryCard({
   }, [alt, overrideTitle]);
 
   const saveMutation = useMutation({
-    mutationFn: async (payload: { image_url: string; alt: string; title: string }) =>
+    mutationFn: async (payload: { image_url: string; alt: string; title: string; description: string }) =>
       saveFn({ data: { slug, ...payload } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin", "category-images"] });
@@ -155,7 +156,7 @@ function CategoryCard({
     setUploading(true);
     try {
       const url = await uploadImage(file, "categories");
-      await saveMutation.mutateAsync({ image_url: url, alt: altValue, title: titleValue });
+      await saveMutation.mutateAsync({ image_url: url, alt: altValue, title: titleValue, description: descriptionValue });
     } catch (err) {
       toast.error("No se pudo subir", { description: err instanceof Error ? err.message : "" });
     } finally {
@@ -164,7 +165,7 @@ function CategoryCard({
   }
 
   function handleSaveMeta() {
-    saveMutation.mutate({ image_url: imageUrl, alt: altValue, title: titleValue });
+    saveMutation.mutate({ image_url: imageUrl, alt: altValue, title: titleValue, description: descriptionValue });
     setEditing(false);
   }
 
