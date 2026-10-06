@@ -99,20 +99,6 @@ export function AccessoryCategoryPage({ category }: { category: Category }) {
         <h1 className="font-display text-5xl md:text-6xl">{info.title}</h1>
         <p className="mt-4 text-muted-foreground">{info.description}</p>
 
-        <div className="mt-8 flex justify-center gap-6 text-xs uppercase tracking-[0.14em]">
-          <Link to="/accesorios/colgantes" className="hover:underline">
-            Cuerdas para el móvil
-          </Link>
-          <Link to="/accesorios/protectores" className="hover:underline">
-            Protectores
-          </Link>
-          <Link to="/accesorios/cargadores" className="hover:underline">
-            Cargadores
-          </Link>
-          <Link to="/accesorios/otros" className="hover:underline">
-            Otros accesorios
-          </Link>
-        </div>
       </header>
 
       {isLoading ? (
