@@ -131,7 +131,7 @@ function CategoryHighlights() {
 
             <Link
               to="/fundas-sublimacion"
-              className="mt-8 inline-flex items-center gap-2 border-b border-foreground pb-2 text-base font-semibold uppercase tracking-[0.18em] transition-all hover:gap-3"
+              className="mt-8 inline-flex items-center gap-2 bg-foreground px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-background transition-all hover:opacity-90 hover:gap-3"
             >
               Diseños exclusivos
               <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
@@ -168,7 +168,7 @@ function AccessoriesSection() {
 
             <Link
               to="/accesorios"
-              className="mt-8 inline-flex items-center gap-2 border-b border-foreground pb-2 text-base font-semibold uppercase tracking-[0.18em] transition-all hover:gap-3"
+              className="mt-8 inline-flex items-center gap-2 bg-foreground px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-background transition-all hover:opacity-90 hover:gap-3"
             >
               Descubre los accesorios
               <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
