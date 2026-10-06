@@ -71,10 +71,13 @@ function FundasPage() {
     queryKey: ["fundas", sort],
     queryFn: async () => {
       const all = (await productsFn()) as FundaNode[];
-      // Fundas: solo productos etiquetados como sublimación o transparentes.
+      // Fundas: mostrar todos los productos que no pertenezcan a una categoría de accesorios.
+      // Las fundas existentes pueden tener tags "Fundas", "SUBLIMACIÓN" o no tener tags.
+      // Los accesorios se mantienen fuera de esta sección.
+      const accessoryTags = ["accesorios", "colgantes", "protectores", "cargadores"];
       const fundas = all.filter((p) => {
         const tags = p.node.tags ?? [];
-        return tags.includes("sublimacion") || tags.includes("transparentes");
+        return !tags.some((tag) => accessoryTags.includes(tag.toLowerCase()));
       });
       return sortFundas(fundas, sort);
     },
