@@ -75,7 +75,7 @@ export const Route = createFileRoute("/accesorios")({
     seo({
       title: "Accesorios para móvil — Kasea Store",
       description:
-        "Descubre colgantes, protectores y cargadores para tu móvil. Accesorios Kasea que combinan diseño, utilidad y estilo.",
+        "Descubre cuerdas para el móvil, protectores y cargadores para tu móvil. Accesorios Kasea que combinan diseño, utilidad y estilo.",
       path: "/accesorios",
     }),
 
@@ -107,8 +107,8 @@ function AccessoriesPage() {
   const categories = [
     {
       slug: "colgantes",
-      title: "Colgantes",
-      description: "Dale personalidad a tu móvil con nuestros colgantes.",
+      title: "Cuerdas para el móvil",
+      description: "Dale personalidad a tu móvil con nuestras cuerdas para el móvil.",
     },
     {
       slug: "protectores",
@@ -135,7 +135,7 @@ function AccessoriesPage() {
         </h1>
 
         <p className="mt-4 text-muted-foreground">
-          Todo lo que tu móvil necesita: colgantes, protectores y cargadores
+          Todo lo que tu móvil necesita: cuerdas para el móvil, protectores y cargadores
           que combinan diseño, utilidad y estilo Kasea.
         </p>
       </header>

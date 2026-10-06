@@ -163,7 +163,7 @@ function AccessoriesSection() {
             </p>
 
             <p className="mt-4 text-base leading-relaxed text-foreground/80 md:text-lg">
-              Colgantes · Protectores · Cargadores
+              Cuerdas para el móvil · Protectores · Cargadores
             </p>
 
             <Link

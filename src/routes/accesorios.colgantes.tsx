@@ -5,8 +5,8 @@ import { seo } from "@/lib/seo";
 export const Route = createFileRoute("/accesorios/colgantes")({
   head: () =>
     seo({
-      title: "Colgantes para móvil — Kasea Store",
-      description: "Descubre nuestros colgantes para móvil.",
+      title: "Cuerdas para el móvil — Kasea Store",
+      description: "Descubre nuestras cuerdas para el móvil.",
       path: "/accesorios/colgantes",
     }),
   component: () => <AccessoryCategoryPage category="colgantes" />,

@@ -10,8 +10,8 @@ type Category = "colgantes" | "protectores" | "cargadores";
 
 const CATEGORY_INFO: Record<Category, { title: string; description: string }> = {
   colgantes: {
-    title: "Colgantes",
-    description: "Dale personalidad a tu móvil con nuestros colgantes.",
+    title: "Cuerdas para el móvil",
+    description: "Dale personalidad a tu móvil con nuestras cuerdas para el móvil.",
   },
   protectores: {
     title: "Protectores",
@@ -97,7 +97,7 @@ export function AccessoryCategoryPage({ category }: { category: Category }) {
 
         <div className="mt-8 flex justify-center gap-6 text-xs uppercase tracking-[0.14em]">
           <Link to="/accesorios/colgantes" className="hover:underline">
-            Colgantes
+            Cuerdas para el móvil
           </Link>
           <Link to="/accesorios/protectores" className="hover:underline">
             Protectores

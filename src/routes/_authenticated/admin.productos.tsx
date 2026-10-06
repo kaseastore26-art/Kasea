@@ -461,7 +461,7 @@ function AdminProductos() {
               >
                 <option value="">Sin categoría</option>
                 <option value="accesorios">Accesorios</option>
-                <option value="colgantes">Colgantes</option>
+                <option value="colgantes">Cuerdas para el móvil</option>
                 <option value="protectores">Protectores</option>
                 <option value="cargadores">Cargadores</option>
               </select>

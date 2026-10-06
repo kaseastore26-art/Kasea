@@ -35,10 +35,10 @@ const CATEGORIES: Array<{
   },
   {
     slug: "colgantes",
-    title: "Colgantes",
+    title: "Cuerdas para el móvil",
     route: "/accesorios",
     fallback: catSublimacion,
-    defaultAlt: "Colgantes para móvil",
+    defaultAlt: "Cuerdas para el móvil",
   },
   {
     slug: "protectores",
