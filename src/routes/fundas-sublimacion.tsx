@@ -13,7 +13,7 @@ export const Route = createFileRoute("/fundas-sublimacion")({
   component: () => (
     <CollectionPage
       collectionHandle="fundas-sublimacion"
-      source="all"
+      source="collection"
       eyebrow="Colección"
       title="Fundas para el móvil"
       intro="Convierte tu funda en una pieza única. Ideales para personalizar con fotografías, ilustraciones o diseños propios."
