@@ -59,6 +59,8 @@ function HomePage() {
       <HomepageCarousel />
       
       <CategoryHighlights />
+
+      <AccessoriesSection />
       
       <PromoBanner />
       
@@ -134,6 +136,54 @@ function CategoryHighlights() {
               Diseños exclusivos
               <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AccessoriesSection() {
+  return (
+    <section className="border-b border-border/60 bg-background">
+      <div className="container-luxe py-16 md:py-24">
+        <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 lg:gap-20">
+          <div className="max-w-xl">
+            <p className="mb-4 text-base font-semibold uppercase tracking-[0.18em] md:text-lg">
+              Accesorios
+            </p>
+
+            <h2 className="font-display text-5xl leading-tight md:text-7xl lg:text-8xl">
+              Todo lo que tu móvil necesita.
+            </h2>
+
+            <p className="mt-6 text-base leading-relaxed text-foreground/80 md:text-lg">
+              Dale el toque final a tu móvil con accesorios que combinan
+              diseño, utilidad y ese estilo Kasea que se nota en cada detalle.
+            </p>
+
+            <p className="mt-4 text-base leading-relaxed text-foreground/80 md:text-lg">
+              Colgantes · Protectores · Cargadores
+            </p>
+
+            <Link
+              to="/accesorios"
+              className="mt-8 inline-flex items-center gap-2 border-b border-foreground pb-2 text-base font-semibold uppercase tracking-[0.18em] transition-all hover:gap-3"
+            >
+              Descubre los accesorios
+              <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
+            </Link>
+          </div>
+
+          <div className="group overflow-hidden rounded-xl">
+            <img
+              src="/brand/accesorios.png"
+              alt="Accesorios Kasea para móvil"
+              loading="lazy"
+              width={989}
+              height={1590}
+              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+            />
           </div>
         </div>
       </div>
