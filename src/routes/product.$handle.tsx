@@ -105,24 +105,39 @@ useEffect(() => {
   const isLoading = useCartStore((s) => s.isLoading);
   const navigate = useNavigate();
 
-  // Detect if variant already provides a model (e.g. "iPhone 17 Pro Max" in title or options)
-  const needsModelSelector = true;
+  // Solo fundas y protectores necesitan seleccionar modelo de iPhone.
+  // Colgantes y cargadores son productos genéricos.
+  const productTags = p.tags ?? [];
+  const isGenericAccessory =
+    productTags.includes("colgantes") ||
+    productTags.includes("cargadores");
+
+  const needsModelSelector =
+    !isGenericAccessory &&
+    (
+      productTags.includes("sublimacion") ||
+      productTags.includes("transparentes") ||
+      productTags.includes("protectores") ||
+      productTags.includes("fundas")
+    );
     const caseStockFn = useServerFn(getCaseModelStockPublic);
 
   const { data: caseModelStock = {}, isLoading: caseStockLoading } = useQuery({
     queryKey: ["case-model-stock"],
     queryFn: () => caseStockFn(),
     staleTime: 30_000,
+    enabled: needsModelSelector,
   });
 
-  const selectedModelStock = selectedModel
+  const selectedModelStock = needsModelSelector && selectedModel
     ? Number(caseModelStock[selectedModel] ?? 0)
     : 0;
 
-  const modelOutOfStock = Boolean(selectedModel) && selectedModelStock <= 0;
+  const modelOutOfStock =
+    needsModelSelector && Boolean(selectedModel) && selectedModelStock <= 0;
 
   const modelStockExceeded =
-    Boolean(selectedModel) && qty > selectedModelStock;
+    needsModelSelector && Boolean(selectedModel) && qty > selectedModelStock;
 
   const productsFn = useServerFn(getProductsPublic);
   const { data: related = [] } = useQuery({
@@ -321,10 +336,7 @@ if (typeof fbq === "function") {
               disabled={
   isLoading ||
   !inStock ||
-  caseStockLoading ||
-  !selectedModel ||
-  modelOutOfStock ||
-  modelStockExceeded
+  (needsModelSelector && (caseStockLoading || !selectedModel || modelOutOfStock || modelStockExceeded))
 }
               className="w-full h-14 rounded-none border-espresso text-espresso hover:bg-secondary tracking-[0.2em] uppercase text-xs"
             >
@@ -335,10 +347,7 @@ if (typeof fbq === "function") {
               disabled={
   isLoading ||
   !inStock ||
-  caseStockLoading ||
-  !selectedModel ||
-  modelOutOfStock ||
-  modelStockExceeded
+  (needsModelSelector && (caseStockLoading || !selectedModel || modelOutOfStock || modelStockExceeded))
 }
               style={{ backgroundColor: "#000", color: "#fff" }}
               className="w-full h-14 rounded-none hover:opacity-90 tracking-[0.2em] uppercase text-xs disabled:opacity-100 disabled:cursor-not-allowed"

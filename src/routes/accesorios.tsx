@@ -120,8 +120,7 @@ function AccessoriesPage() {
     },
   ] as const;
 
-  const productsByCategory = (slug: string) =>
-    products.filter((product) => product.node.tags?.includes(slug));
+
 
   return (
     <div className="container-luxe py-16 md:py-24">
@@ -145,7 +144,7 @@ function AccessoriesPage() {
           return (
             <a
               key={category.slug}
-              href={`#${category.slug}`}
+              href="#todos-los-accesorios"
               className="group overflow-hidden rounded-xl border border-border bg-card"
             >
               <div className="aspect-[4/5] overflow-hidden bg-secondary">
@@ -190,33 +189,28 @@ function AccessoriesPage() {
           ))}
         </div>
       ) : (
-        <div className="space-y-24">
-          {categories.map((category) => {
-            const categoryProducts = productsByCategory(category.slug);
-
-            if (categoryProducts.length === 0) return null;
-
-            return (
-              <section key={category.slug} id={category.slug} className="scroll-mt-24">
-                <div className="mb-8 flex items-end justify-between gap-4">
-                  <div>
-                    <p className="eyebrow mb-2">Accesorios</p>
-                    <h2 className="font-display text-4xl md:text-5xl">
-                      {category.title}
-                    </h2>
-                  </div>
+        <div id="todos-los-accesorios">
+          {products.length > 0 ? (
+            <>
+              <div className="mb-10 flex items-end justify-between gap-4">
+                <div>
+                  <p className="eyebrow mb-2">Colección completa</p>
+                  <h2 className="font-display text-4xl md:text-5xl">
+                    Todos los accesorios
+                  </h2>
                 </div>
+                <p className="hidden text-sm text-muted-foreground md:block">
+                  Colgantes · Protectores · Cargadores
+                </p>
+              </div>
 
-                <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 md:gap-8 animate-fade-in">
-                  {categoryProducts.map((product) => (
-                    <ProductCard key={product.node.id} product={product} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
-
-          {products.length === 0 && (
+              <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 md:gap-8 animate-fade-in">
+                {products.map((product) => (
+                  <ProductCard key={product.node.id} product={product} />
+                ))}
+              </div>
+            </>
+          ) : (
             <div className="mx-auto max-w-2xl rounded-xl border border-dashed border-border bg-sand/20 py-20 text-center">
               <Package
                 className="mx-auto h-10 w-10 text-muted-foreground"
