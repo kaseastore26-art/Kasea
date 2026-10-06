@@ -59,10 +59,10 @@ function HomePage() {
       <HomepageCarousel />
       
       <CategoryHighlights />
-
-      <AccessoriesSection />
       
       <PromoBanner />
+      
+      <AccessoriesSection />
       
       <Reviews />
 
