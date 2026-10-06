@@ -54,6 +54,13 @@ const CATEGORIES: Array<{
     fallback: catSublimacion,
     defaultAlt: "Cargadores para móvil",
   },
+  {
+    slug: "otros",
+    title: "Otros accesorios",
+    route: "/accesorios/otros",
+    fallback: catSublimacion,
+    defaultAlt: "Otros accesorios",
+  },
 ];
 
 export const Route = createFileRoute("/_authenticated/admin/categorias")({

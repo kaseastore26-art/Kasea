@@ -75,7 +75,7 @@ export const Route = createFileRoute("/accesorios")({
     seo({
       title: "Accesorios para móvil — Kasea Store",
       description:
-        "Descubre cuerdas para el móvil, protectores y cargadores para tu móvil. Accesorios Kasea que combinan diseño, utilidad y estilo.",
+        "Descubre cuerdas para el móvil, protectores, cargadores y otros accesorios para tu móvil. Accesorios Kasea que combinan diseño, utilidad y estilo.",
       path: "/accesorios",
     }),
 
@@ -120,6 +120,11 @@ function AccessoriesPage() {
       title: "Cargadores",
       description: "Carga tu móvil con accesorios pensados para el día a día.",
     },
+    {
+      slug: "otros",
+      title: "Otros accesorios",
+      description: "Encuentra otros accesorios útiles para tu móvil.",
+    },
   ] as const;
 
 
@@ -135,14 +140,14 @@ function AccessoriesPage() {
         </h1>
 
         <p className="mt-4 text-muted-foreground">
-          Todo lo que tu móvil necesita: cuerdas para el móvil, protectores y cargadores
+          Todo lo que tu móvil necesita: cuerdas para el móvil, protectores, cargadores y otros accesorios
           que combinan diseño, utilidad y estilo Kasea.
         </p>
       </header>
       )}
 
       {isAccessoriesRoot && (
-      <section className="mb-20 grid grid-cols-1 gap-6 md:grid-cols-3">
+      <section className="mb-20 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {categories.map((category) => {
           const image = imageMap.get(category.slug);
 

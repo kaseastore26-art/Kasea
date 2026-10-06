@@ -113,7 +113,8 @@ useEffect(() => {
   const isGenericAccessory =
     productTags.includes("accesorios") ||
     productTags.includes("colgantes") ||
-    productTags.includes("cargadores");
+    productTags.includes("cargadores") ||
+    productTags.includes("otros");
 
   const needsModelSelector = !isGenericAccessory;
   const useCaseModelStock = needsModelSelector && !isProtector;

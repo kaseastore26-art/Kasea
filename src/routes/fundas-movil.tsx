@@ -74,7 +74,7 @@ function FundasPage() {
       // Fundas: mostrar todos los productos que no pertenezcan a una categoría de accesorios.
       // Las fundas existentes pueden tener tags "Fundas", "SUBLIMACIÓN" o no tener tags.
       // Los accesorios se mantienen fuera de esta sección.
-      const accessoryTags = ["accesorios", "colgantes", "protectores", "cargadores"];
+      const accessoryTags = ["accesorios", "colgantes", "protectores", "cargadores", "otros"];
       const fundas = all.filter((p) => {
         const tags = p.node.tags ?? [];
         return !tags.some((tag) => accessoryTags.includes(tag.toLowerCase()));

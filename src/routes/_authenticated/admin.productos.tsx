@@ -128,7 +128,7 @@ interface FormState {
   status: "active" | "draft" | "archived";
   imageUrl: string;
   isCustom: boolean;
-  category: "accesorios" | "colgantes" | "protectores" | "cargadores" | "";
+  category: "accesorios" | "colgantes" | "protectores" | "cargadores" | "otros" | "";
 }
 
 const EMPTY: FormState = {
@@ -464,6 +464,7 @@ function AdminProductos() {
                 <option value="colgantes">Cuerdas para el móvil</option>
                 <option value="protectores">Protectores</option>
                 <option value="cargadores">Cargadores</option>
+                <option value="otros">Otros accesorios</option>
               </select>
             </div>
             <div className="grid grid-cols-2 gap-4">

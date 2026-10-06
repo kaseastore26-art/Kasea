@@ -6,7 +6,7 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { getAccessoriesProductsPublic } from "@/lib/catalog.functions";
 
-type Category = "colgantes" | "protectores" | "cargadores";
+type Category = "colgantes" | "protectores" | "cargadores" | "otros";
 
 const CATEGORY_INFO: Record<Category, { title: string; description: string }> = {
   colgantes: {
@@ -20,6 +20,10 @@ const CATEGORY_INFO: Record<Category, { title: string; description: string }> = 
   cargadores: {
     title: "Cargadores",
     description: "Carga tu móvil con accesorios pensados para el día a día.",
+  },
+  otros: {
+    title: "Otros accesorios",
+    description: "Encuentra otros accesorios útiles para tu móvil.",
   },
 };
 
@@ -104,6 +108,9 @@ export function AccessoryCategoryPage({ category }: { category: Category }) {
           </Link>
           <Link to="/accesorios/cargadores" className="hover:underline">
             Cargadores
+          </Link>
+          <Link to="/accesorios/otros" className="hover:underline">
+            Otros accesorios
           </Link>
         </div>
       </header>

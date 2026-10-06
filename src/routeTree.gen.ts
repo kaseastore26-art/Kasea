@@ -32,6 +32,7 @@ import { Route as ProductHandleRouteImport } from './routes/product.$handle'
 import { Route as CheckoutExitoRouteImport } from './routes/checkout.exito'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
 import { Route as AccesoriosProtectoresRouteImport } from './routes/accesorios.protectores'
+import { Route as AccesoriosOtrosRouteImport } from './routes/accesorios.otros'
 import { Route as AccesoriosColgantesRouteImport } from './routes/accesorios.colgantes'
 import { Route as AccesoriosCargadoresRouteImport } from './routes/accesorios.cargadores'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
@@ -159,6 +160,11 @@ const AccesoriosProtectoresRoute = AccesoriosProtectoresRouteImport.update({
   path: '/protectores',
   getParentRoute: () => AccesoriosRoute,
 } as any)
+const AccesoriosOtrosRoute = AccesoriosOtrosRouteImport.update({
+  id: '/otros',
+  path: '/otros',
+  getParentRoute: () => AccesoriosRoute,
+} as any)
 const AccesoriosColgantesRoute = AccesoriosColgantesRouteImport.update({
   id: '/colgantes',
   path: '/colgantes',
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/accesorios/cargadores': typeof AccesoriosCargadoresRoute
   '/accesorios/colgantes': typeof AccesoriosColgantesRoute
+  '/accesorios/otros': typeof AccesoriosOtrosRoute
   '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByTo {
   '/tienda': typeof TiendaRoute
   '/accesorios/cargadores': typeof AccesoriosCargadoresRoute
   '/accesorios/colgantes': typeof AccesoriosColgantesRoute
+  '/accesorios/otros': typeof AccesoriosOtrosRoute
   '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
@@ -322,6 +330,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/accesorios/cargadores': typeof AccesoriosCargadoresRoute
   '/accesorios/colgantes': typeof AccesoriosColgantesRoute
+  '/accesorios/otros': typeof AccesoriosOtrosRoute
   '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
@@ -360,6 +369,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/accesorios/cargadores'
     | '/accesorios/colgantes'
+    | '/accesorios/otros'
     | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
@@ -395,6 +405,7 @@ export interface FileRouteTypes {
     | '/tienda'
     | '/accesorios/cargadores'
     | '/accesorios/colgantes'
+    | '/accesorios/otros'
     | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
@@ -432,6 +443,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/accesorios/cargadores'
     | '/accesorios/colgantes'
+    | '/accesorios/otros'
     | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
@@ -636,6 +648,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccesoriosProtectoresRouteImport
       parentRoute: typeof AccesoriosRoute
     }
+    '/accesorios/otros': {
+      id: '/accesorios/otros'
+      path: '/otros'
+      fullPath: '/accesorios/otros'
+      preLoaderRoute: typeof AccesoriosOtrosRouteImport
+      parentRoute: typeof AccesoriosRoute
+    }
     '/accesorios/colgantes': {
       id: '/accesorios/colgantes'
       path: '/colgantes'
@@ -764,12 +783,14 @@ const AuthenticatedRouteRouteWithChildren =
 interface AccesoriosRouteChildren {
   AccesoriosCargadoresRoute: typeof AccesoriosCargadoresRoute
   AccesoriosColgantesRoute: typeof AccesoriosColgantesRoute
+  AccesoriosOtrosRoute: typeof AccesoriosOtrosRoute
   AccesoriosProtectoresRoute: typeof AccesoriosProtectoresRoute
 }
 
 const AccesoriosRouteChildren: AccesoriosRouteChildren = {
   AccesoriosCargadoresRoute: AccesoriosCargadoresRoute,
   AccesoriosColgantesRoute: AccesoriosColgantesRoute,
+  AccesoriosOtrosRoute: AccesoriosOtrosRoute,
   AccesoriosProtectoresRoute: AccesoriosProtectoresRoute,
 }
 

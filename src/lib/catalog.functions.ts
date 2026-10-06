@@ -170,7 +170,7 @@ export const getAccessoriesProductsPublic = createServerFn({ method: "GET" }).ha
     .select(PRODUCT_SELECT)
     .eq("status", "active")
     .eq("is_custom", false)
-    .overlaps("tags", ["colgantes", "protectores", "cargadores"])
+    .overlaps("tags", ["colgantes", "protectores", "cargadores", "otros"])
     .order("position", { ascending: true });
 
   if (error) throw new Error(error.message);
