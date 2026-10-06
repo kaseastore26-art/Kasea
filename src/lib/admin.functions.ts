@@ -168,7 +168,7 @@ export const listCategoryImagesPublic = createServerFn({ method: "GET" }).handle
   const supabase = publicClient();
   const { data, error } = await supabase
     .from("category_images")
-    .select("slug, image_url, alt, title, description");
+    .select("slug, image_url, alt, title");
   if (error) throw new Error(error.message);
   return data ?? [];
 });
@@ -178,7 +178,6 @@ const SaveCategoryImageSchema = z.object({
   image_url: z.string().min(1),
   alt: z.string().default(""),
   title: z.string().default(""),
-  description: z.string().default(""),
 });
 
 export const saveCategoryImage = createServerFn({ method: "POST" })
@@ -193,7 +192,6 @@ export const saveCategoryImage = createServerFn({ method: "POST" })
         image_url: data.image_url,
         alt: data.alt,
         title: data.title,
-        description: data.description,
       },
       { onConflict: "slug" },
     );
