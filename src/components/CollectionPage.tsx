@@ -15,6 +15,7 @@ interface Props {
   // así los productos nuevos del panel aparecen siempre, sin depender de enlaces
   // de colección). "collection" = solo los productos enlazados a la colección.
   source?: "collection" | "all";
+  includeTags?: string[];
 }
 
 function ProductCard({ product, collectionHandle }: { product: ShopifyProduct; collectionHandle: string }) {
@@ -70,7 +71,7 @@ function ProductCard({ product, collectionHandle }: { product: ShopifyProduct; c
   );
 }
 
-export function CollectionPage({ collectionHandle, eyebrow, title, intro, source = "collection" }: Props) {
+export function CollectionPage({ collectionHandle, eyebrow, title, intro, source = "collection", includeTags }: Props) {
   const collectionFn = useServerFn(getCollectionProductsPublic);
   const allFn = useServerFn(getProductsPublic);
   const { data, isLoading } = useQuery({
@@ -89,7 +90,7 @@ export function CollectionPage({ collectionHandle, eyebrow, title, intro, source
 
   // El orden lo define products.position (las flechas del panel), ya aplicado en
   // el servidor tanto por getProductsPublic como por getCollectionProductsPublic.
-  const products = data?.products ?? [];
+  const products = (data?.products ?? []).filter((product) => !includeTags || includeTags.some((tag) => product.node.tags?.includes(tag)));
 
 
   return (
