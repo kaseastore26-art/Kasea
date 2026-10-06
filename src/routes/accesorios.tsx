@@ -144,7 +144,7 @@ function AccessoriesPage() {
           return (
             <a
               key={category.slug}
-              href="#todos-los-accesorios"
+              href={`/accesorios/${category.slug}`}
               className="group overflow-hidden rounded-xl border border-border bg-card"
             >
               <div className="aspect-[4/5] overflow-hidden bg-secondary">
@@ -179,56 +179,23 @@ function AccessoriesPage() {
         })}
       </section>
 
-      {isLoading ? (
-        <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 md:gap-8">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div
-              key={i}
-              className="aspect-[4/5] animate-pulse rounded-xl bg-sand/40"
-            />
-          ))}
-        </div>
-      ) : (
-        <div id="todos-los-accesorios">
-          {products.length > 0 ? (
-            <>
-              <div className="mb-10 flex items-end justify-between gap-4">
-                <div>
-                  <p className="eyebrow mb-2">Colección completa</p>
-                  <h2 className="font-display text-4xl md:text-5xl">
-                    Todos los accesorios
-                  </h2>
-                </div>
-                <p className="hidden text-sm text-muted-foreground md:block">
-                  Colgantes · Protectores · Cargadores
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 md:gap-8 animate-fade-in">
-                {products.map((product) => (
-                  <ProductCard key={product.node.id} product={product} />
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="mx-auto max-w-2xl rounded-xl border border-dashed border-border bg-sand/20 py-20 text-center">
-              <Package
-                className="mx-auto h-10 w-10 text-muted-foreground"
-                strokeWidth={1}
-              />
-
-              <h2 className="mt-4 font-display text-2xl">
-                Aún no hay accesorios
-              </h2>
-
-              <p className="mx-auto mt-3 max-w-md text-sm text-muted-foreground">
-                Añade productos desde el panel de administración y asígnales las
-                categorías Colgantes, Protectores o Cargadores.
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        {categories.map((category) => (
+          <Link
+            key={category.slug}
+            to={`/accesorios/${category.slug}`}
+            className="group rounded-xl border border-border bg-card p-6 text-center transition-colors hover:bg-secondary"
+          >
+            <p className="font-display text-3xl">{category.title}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {category.description}
+            </p>
+            <span className="mt-5 inline-block text-xs font-semibold uppercase tracking-[0.14em]">
+              Ver productos →
+            </span>
+          </Link>
+        ))}
+      </section>
     </div>
   );
 }

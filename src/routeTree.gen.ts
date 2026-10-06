@@ -31,6 +31,9 @@ import { Route as CheckoutIndexRouteImport } from './routes/checkout.index'
 import { Route as ProductHandleRouteImport } from './routes/product.$handle'
 import { Route as CheckoutExitoRouteImport } from './routes/checkout.exito'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
+import { Route as AccesoriosProtectoresRouteImport } from './routes/accesorios.protectores'
+import { Route as AccesoriosColgantesRouteImport } from './routes/accesorios.colgantes'
+import { Route as AccesoriosCargadoresRouteImport } from './routes/accesorios.cargadores'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminStockFundasRouteImport } from './routes/_authenticated/admin.stock-fundas'
@@ -151,6 +154,21 @@ const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   path: '/api/stripe-webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccesoriosProtectoresRoute = AccesoriosProtectoresRouteImport.update({
+  id: '/protectores',
+  path: '/protectores',
+  getParentRoute: () => AccesoriosRoute,
+} as any)
+const AccesoriosColgantesRoute = AccesoriosColgantesRouteImport.update({
+  id: '/colgantes',
+  path: '/colgantes',
+  getParentRoute: () => AccesoriosRoute,
+} as any)
+const AccesoriosCargadoresRoute = AccesoriosCargadoresRouteImport.update({
+  id: '/cargadores',
+  path: '/cargadores',
+  getParentRoute: () => AccesoriosRoute,
+} as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -212,7 +230,7 @@ const AuthenticatedAdminAjustesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/accesorios': typeof AccesoriosRoute
+  '/accesorios': typeof AccesoriosRouteWithChildren
   '/auth': typeof AuthRoute
   '/contacto': typeof ContactoRoute
   '/favoritos': typeof FavoritosRoute
@@ -229,6 +247,9 @@ export interface FileRoutesByFullPath {
   '/terminos': typeof TerminosRoute
   '/tienda': typeof TiendaRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/accesorios/cargadores': typeof AccesoriosCargadoresRoute
+  '/accesorios/colgantes': typeof AccesoriosColgantesRoute
+  '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
   '/product/$handle': typeof ProductHandleRoute
@@ -245,7 +266,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/accesorios': typeof AccesoriosRoute
+  '/accesorios': typeof AccesoriosRouteWithChildren
   '/auth': typeof AuthRoute
   '/contacto': typeof ContactoRoute
   '/favoritos': typeof FavoritosRoute
@@ -261,6 +282,9 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terminos': typeof TerminosRoute
   '/tienda': typeof TiendaRoute
+  '/accesorios/cargadores': typeof AccesoriosCargadoresRoute
+  '/accesorios/colgantes': typeof AccesoriosColgantesRoute
+  '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
   '/product/$handle': typeof ProductHandleRoute
@@ -279,7 +303,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
-  '/accesorios': typeof AccesoriosRoute
+  '/accesorios': typeof AccesoriosRouteWithChildren
   '/auth': typeof AuthRoute
   '/contacto': typeof ContactoRoute
   '/favoritos': typeof FavoritosRoute
@@ -296,6 +320,9 @@ export interface FileRoutesById {
   '/terminos': typeof TerminosRoute
   '/tienda': typeof TiendaRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
+  '/accesorios/cargadores': typeof AccesoriosCargadoresRoute
+  '/accesorios/colgantes': typeof AccesoriosColgantesRoute
+  '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
   '/product/$handle': typeof ProductHandleRoute
@@ -331,6 +358,9 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/tienda'
     | '/admin'
+    | '/accesorios/cargadores'
+    | '/accesorios/colgantes'
+    | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
     | '/product/$handle'
@@ -363,6 +393,9 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terminos'
     | '/tienda'
+    | '/accesorios/cargadores'
+    | '/accesorios/colgantes'
+    | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
     | '/product/$handle'
@@ -397,6 +430,9 @@ export interface FileRouteTypes {
     | '/terminos'
     | '/tienda'
     | '/_authenticated/admin'
+    | '/accesorios/cargadores'
+    | '/accesorios/colgantes'
+    | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
     | '/product/$handle'
@@ -415,7 +451,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
-  AccesoriosRoute: typeof AccesoriosRoute
+  AccesoriosRoute: typeof AccesoriosRouteWithChildren
   AuthRoute: typeof AuthRoute
   ContactoRoute: typeof ContactoRoute
   FavoritosRoute: typeof FavoritosRoute
@@ -593,6 +629,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/accesorios/protectores': {
+      id: '/accesorios/protectores'
+      path: '/protectores'
+      fullPath: '/accesorios/protectores'
+      preLoaderRoute: typeof AccesoriosProtectoresRouteImport
+      parentRoute: typeof AccesoriosRoute
+    }
+    '/accesorios/colgantes': {
+      id: '/accesorios/colgantes'
+      path: '/colgantes'
+      fullPath: '/accesorios/colgantes'
+      preLoaderRoute: typeof AccesoriosColgantesRouteImport
+      parentRoute: typeof AccesoriosRoute
+    }
+    '/accesorios/cargadores': {
+      id: '/accesorios/cargadores'
+      path: '/cargadores'
+      fullPath: '/accesorios/cargadores'
+      preLoaderRoute: typeof AccesoriosCargadoresRouteImport
+      parentRoute: typeof AccesoriosRoute
+    }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
       path: '/admin'
@@ -704,10 +761,26 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface AccesoriosRouteChildren {
+  AccesoriosCargadoresRoute: typeof AccesoriosCargadoresRoute
+  AccesoriosColgantesRoute: typeof AccesoriosColgantesRoute
+  AccesoriosProtectoresRoute: typeof AccesoriosProtectoresRoute
+}
+
+const AccesoriosRouteChildren: AccesoriosRouteChildren = {
+  AccesoriosCargadoresRoute: AccesoriosCargadoresRoute,
+  AccesoriosColgantesRoute: AccesoriosColgantesRoute,
+  AccesoriosProtectoresRoute: AccesoriosProtectoresRoute,
+}
+
+const AccesoriosRouteWithChildren = AccesoriosRoute._addFileChildren(
+  AccesoriosRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
-  AccesoriosRoute: AccesoriosRoute,
+  AccesoriosRoute: AccesoriosRouteWithChildren,
   AuthRoute: AuthRoute,
   ContactoRoute: ContactoRoute,
   FavoritosRoute: FavoritosRoute,
