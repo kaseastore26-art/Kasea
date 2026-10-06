@@ -131,21 +131,33 @@ useEffect(() => {
     ? Number(caseModelStock[selectedModel] ?? 0)
     : 0;
 
-  const variantStock = Number(variant?.stock ?? 0);
+  // Los protectores tienen stock propio, independiente del stock de fundas.
+  // El protector usa una única variante genérica (Default Title).
+  const protectorStock = isProtector
+    ? Number(variant?.quantityAvailable ?? 0)
+    : 0;
+
+  const variantStock = Number(variant?.quantityAvailable ?? 0);
 
   const modelOutOfStock =
     useCaseModelStock
       ? Boolean(selectedModel) && selectedModelStock <= 0
-      : needsModelSelector && Boolean(selectedModel) && variantStock <= 0;
+      : needsModelSelector &&
+        Boolean(selectedModel) &&
+        (isProtector ? protectorStock : variantStock) <= 0;
 
   const modelStockExceeded =
     useCaseModelStock
       ? Boolean(selectedModel) && qty > selectedModelStock
-      : needsModelSelector && Boolean(selectedModel) && qty > variantStock;
+      : needsModelSelector &&
+        Boolean(selectedModel) &&
+        qty > (isProtector ? protectorStock : variantStock);
 
   const effectiveModelStock = useCaseModelStock
     ? selectedModelStock
-    : variantStock;
+    : isProtector
+      ? protectorStock
+      : variantStock;
 
   const productsFn = useServerFn(getProductsPublic);
   const { data: related = [] } = useQuery({
