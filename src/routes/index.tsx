@@ -193,6 +193,18 @@ function AccessoriesSection() {
 
 function Hero() {
   const content = useSiteContent();
+  const [heroSlide, setHeroSlide] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroSlide((prev) => (prev + 1) % 2);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const heroImages = [heroImg, lifestyleImg];
+
   return (
     <section className="relative isolate overflow-hidden border-b border-border/60 bg-background">
       {/* Mobile: neutro claro — beige/ivory suave */}
@@ -205,14 +217,20 @@ function Hero() {
         <div className="pointer-events-none absolute inset-x-6 bottom-32 h-px bg-[linear-gradient(to_right,transparent,rgba(120,95,60,0.2),transparent)]" />
 
         <div className="relative w-full">
-          <img
-            src={heroImg}
-            alt="Portada Kasea con funda de móvil premium"
-            className="block h-auto w-full object-cover"
-            width={1200}
-            height={1200}
-            fetchPriority="high"
-          />
+          {heroImages.map((image, index) => (
+            <img
+              key={image}
+              src={image}
+              alt="Portada Kasea con funda de móvil premium"
+              className={`absolute inset-0 block h-full w-full object-cover transition-opacity duration-1000 ${
+                heroSlide === index ? "opacity-100" : "opacity-0"
+              }`}
+              width={1200}
+              height={1200}
+              fetchPriority={index === 0 ? "high" : "auto"}
+            />
+          ))}
+          <div className="relative aspect-square w-full" />
           <div className="absolute inset-y-0 left-0 flex w-[46%] items-center justify-center px-3">
             <h1 className="font-display text-[1.45rem] font-semibold leading-[1.12] tracking-[-0.01em] text-foreground text-center [text-shadow:0_1px_8px_rgba(255,255,255,0.9)] xs:text-[1.7rem] sm:text-[2.1rem]">
               {content.hero_title_line1}
@@ -245,13 +263,18 @@ function Hero() {
       {/* Desktop: overlay layout */}
       <div className="hidden md:block">
         <div className="absolute inset-0">
-          <img
-            src={heroImg}
-            alt="Ambiente premium de Kasea con funda de móvil en un entorno cálido y elegante"
-            className="h-full w-full object-cover object-center"
-            width={1920}
-            height={1280}
-          />
+          {heroImages.map((image, index) => (
+            <img
+              key={image}
+              src={image}
+              alt="Ambiente premium de Kasea con funda de móvil en un entorno cálido y elegante"
+              className={`absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-1000 ${
+                heroSlide === index ? "opacity-100" : "opacity-0"
+              }`}
+              width={1920}
+              height={1280}
+            />
+          ))}
           <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-background)_0%,rgba(0,0,0,0.15)_45%,transparent_70%)]" />
           <div className="absolute inset-x-0 bottom-0 h-32 bg-[linear-gradient(to_bottom,transparent,var(--color-background))]" />
         </div>
