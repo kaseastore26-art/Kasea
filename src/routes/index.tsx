@@ -98,13 +98,20 @@ const HOME_CATEGORIES: Array<{
 ];
 
 function CategoryHighlights() {
+  const { data: overrides } = useCategoryImages();
+
   return (
     <section id="categorias" className="border-b border-border/60 bg-background">
       <div className="container-luxe py-16 md:py-24">
         <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 lg:gap-20">
           <Link to="/fundas-sublimacion" className="group block overflow-hidden rounded-xl">
             <img
-              src="/brand/fundas-movil.png"
+              src={pickCategoryImage(
+                overrides,
+                "sublimacion",
+                "/brand/fundas-movil.png",
+                "Mujer llevando una funda Kasea",
+              )}
               alt="Mujer llevando una funda Kasea"
               loading="lazy"
               width={1200}
@@ -223,7 +230,7 @@ function Hero() {
               key={image}
               src={image}
               alt="Portada Kasea con funda de móvil premium"
-              className={`absolute inset-0 block h-full w-full object-cover transition-opacity duration-1000 ${
+              className={`absolute inset-0 block h-full w-full object-contain transition-opacity duration-1000 ${
                 heroSlide === index ? "opacity-100" : "opacity-0"
               }`}
               width={1200}
@@ -231,7 +238,7 @@ function Hero() {
               fetchPriority={index === 0 ? "high" : "auto"}
             />
           ))}
-          <div className="relative aspect-square w-full" />
+          <div className="relative aspect-[16/10] w-full bg-[#f7f3ec]" />
           <div className="absolute inset-y-0 left-0 flex w-[46%] items-center justify-center px-3">
             <h1 className="font-display text-[1.45rem] font-semibold leading-[1.12] tracking-[-0.01em] text-foreground text-center [text-shadow:0_1px_8px_rgba(255,255,255,0.9)] xs:text-[1.7rem] sm:text-[2.1rem]">
               {content.hero_title_line1}
