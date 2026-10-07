@@ -165,7 +165,23 @@ useEffect(() => {
     queryKey: ["related", p.id],
     queryFn: async () => {
       const all = (await productsFn()) as ShopifyProduct[];
-      return all.filter((e) => e.node.id !== p.id).slice(0, 4);
+      const available = all.filter((e) => e.node.id !== p.id);
+
+      const pickRandom = (tag: string) => {
+        const products = available.filter((e) => (e.node.tags ?? []).includes(tag));
+        if (!products.length) return null;
+        return products[Math.floor(Math.random() * products.length)];
+      };
+
+      return [
+        { product: pickRandom("colgantes"), category: "/accesorios/colgantes" },
+        { product: pickRandom("protectores"), category: "/accesorios/protectores" },
+        { product: pickRandom("cargadores"), category: "/accesorios/cargadores" },
+        { product: pickRandom("otros"), category: "/accesorios/otros" },
+      ].filter(
+        (item): item is { product: ShopifyProduct; category: string } =>
+          item.product !== null,
+      );
     },
   });
 
@@ -386,16 +402,16 @@ if (typeof fbq === "function") {
         <section className="mt-24 md:mt-32">
           <h2 className="font-display text-3xl mb-8">También te puede gustar</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            {related.slice(0, 4).map((rel: ShopifyProduct) => {
-              const img = rel.node.images?.edges?.[0]?.node;
+            {related.map((rel) => {
+              const img = rel.product.node.images?.edges?.[0]?.node;
               return (
-                <Link key={rel.node.id} to="/product/$handle" params={{ handle: rel.node.handle }} className="group">
+                <Link key={rel.product.node.id} to={rel.category} className="group">
                   <div className="aspect-[4/5] bg-white overflow-hidden mb-3 rounded-xl">
-                    {img && <img src={img.url} alt={img.altText ?? rel.node.title} className="w-full h-full object-contain p-3 md:p-5 group-hover:scale-105 transition-transform duration-700" loading="lazy" />}
+                    {img && <img src={img.url} alt={img.altText ?? rel.product.node.title} className="w-full h-full object-contain p-3 md:p-5 group-hover:scale-105 transition-transform duration-700" loading="lazy" />}
                   </div>
                   <div className="flex justify-between items-baseline">
-                    <h3 className="font-display text-base">{rel.node.title}</h3>
-                    <span className="text-sm">{formatPrice(rel.node.priceRange.minVariantPrice.amount, rel.node.priceRange.minVariantPrice.currencyCode)}</span>
+                    <h3 className="font-display text-base">{rel.product.node.title}</h3>
+                    <span className="text-sm">{formatPrice(rel.product.node.priceRange.minVariantPrice.amount, rel.product.node.priceRange.minVariantPrice.currencyCode)}</span>
                   </div>
                 </Link>
               );
