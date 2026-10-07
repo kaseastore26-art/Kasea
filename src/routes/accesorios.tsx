@@ -180,7 +180,7 @@ function AccessoriesPage() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   {category.description}
                 </p>
-                <span className="mt-5 inline-block text-xs font-semibold uppercase tracking-[0.14em]">
+                <span className="mt-5 inline-flex items-center gap-2 bg-foreground px-5 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-background transition-all hover:opacity-90">
                   Ver productos →
                 </span>
               </div>
