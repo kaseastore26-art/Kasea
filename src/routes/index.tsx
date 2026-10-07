@@ -147,7 +147,7 @@ function CategoryHighlights() {
 
           <Link
             to="/accesorios"
-            className="mt-14 inline-flex items-center justify-center gap-2 bg-foreground px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-background transition-all hover:opacity-90 hover:gap-3 md:hidden"
+            className="mt-8 inline-flex items-center justify-center gap-2 bg-foreground px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-background transition-all hover:opacity-90 hover:gap-3 md:hidden"
           >
             Descubre los accesorios
             <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
@@ -163,7 +163,7 @@ function AccessoriesSection() {
     <section className="border-b border-border/60 bg-background">
       <div className="container-luxe py-16 md:py-24">
         <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 lg:gap-20">
-          <div className="max-w-xl">
+          <div className="order-2 max-w-xl md:order-1">
             <p className="mb-4 text-base font-semibold uppercase tracking-[0.18em] md:text-lg">
               Accesorios
             </p>
@@ -183,14 +183,14 @@ function AccessoriesSection() {
 
             <Link
               to="/accesorios"
-              className="mt-14 inline-flex items-center gap-2 bg-foreground px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-background transition-all hover:opacity-90 hover:gap-3"
+              className="mt-8 inline-flex items-center gap-2 bg-foreground px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-background transition-all hover:opacity-90 hover:gap-3"
             >
               Descubre los accesorios
               <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
             </Link>
           </div>
 
-          <div className="group overflow-hidden rounded-xl">
+          <div className="order-1 group overflow-hidden rounded-xl md:order-2">
             <img
               src="/brand/accesorios.png"
               alt="Accesorios Kasea para móvil"
