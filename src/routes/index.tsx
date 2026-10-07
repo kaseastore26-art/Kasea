@@ -14,9 +14,8 @@ import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 
 import { BrandLogo } from "@/components/BrandLogo";
 
-import heroAsset from "@/assets/hero-kasea.png.asset.json";
-import heroSecondImg from "@/assets/hero-kasea-2.png";
-const heroImg = heroAsset.url;
+const heroImg = "/brand/hero-kasea.png";
+const heroSecondImg = "/brand/hero-kasea-2.png";
 import lifestyleImg from "@/assets/promo-friends.png.asset.json";
 
 import carousel01 from "@/assets/carousel-01.png.asset.json";
@@ -111,7 +110,7 @@ function CategoryHighlights() {
                 "sublimacion",
                 "/brand/fundas-movil.png",
                 "Mujer llevando una funda Kasea",
-              )}
+              ).url}
               alt="Mujer llevando una funda Kasea"
               loading="lazy"
               width={1200}
