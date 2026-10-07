@@ -229,7 +229,7 @@ function Hero() {
               key={image}
               src={image}
               alt="Portada Kasea con funda de móvil premium"
-              className={`absolute inset-0 block h-full w-full object-contain transition-opacity duration-1000 ${
+              className={`absolute inset-0 z-10 block h-full w-full object-contain transition-opacity duration-1000 ${
                 heroSlide === index ? "opacity-100" : "opacity-0"
               }`}
               width={1200}
@@ -238,7 +238,7 @@ function Hero() {
             />
           ))}
           <div className="relative aspect-[16/10] w-full bg-[#f7f3ec]" />
-          <div className="absolute inset-y-0 left-0 flex w-[46%] items-center justify-center px-3">
+          <div className="absolute inset-y-0 left-0 z-20 flex w-[46%] items-center justify-center px-3">
             <h1 className="font-display text-[1.45rem] font-semibold leading-[1.12] tracking-[-0.01em] text-foreground text-center [text-shadow:0_1px_8px_rgba(255,255,255,0.9)] xs:text-[1.7rem] sm:text-[2.1rem]">
               {content.hero_title_line1}
               <br />
