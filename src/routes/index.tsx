@@ -15,6 +15,7 @@ import { formatPrice, type ShopifyProduct } from "@/lib/shopify";
 import { BrandLogo } from "@/components/BrandLogo";
 
 import heroAsset from "@/assets/hero-kasea.png.asset.json";
+import heroSecondImg from "@/assets/hero-kasea-2.png";
 const heroImg = heroAsset.url;
 import lifestyleImg from "@/assets/promo-friends.png.asset.json";
 
@@ -203,7 +204,7 @@ function Hero() {
     return () => clearInterval(interval);
   }, []);
 
-  const heroImages = [heroImg, lifestyleImg];
+  const heroImages = [heroImg, heroSecondImg];
 
   return (
     <section className="relative isolate overflow-hidden border-b border-border/60 bg-background">
