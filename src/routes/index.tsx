@@ -146,10 +146,10 @@ function CategoryHighlights() {
           </div>
 
           <Link
-            to="/accesorios"
+            to="/fundas-sublimacion"
             className="mt-8 inline-flex items-center justify-center gap-2 bg-foreground px-7 py-4 text-sm font-semibold uppercase tracking-[0.18em] text-background transition-all hover:opacity-90 hover:gap-3 md:hidden"
           >
-            Descubre los accesorios
+            Diseños exclusivos
             <ArrowRight className="h-4 w-4" strokeWidth={1.5} />
           </Link>
         </div>
