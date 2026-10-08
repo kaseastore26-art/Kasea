@@ -25,4 +25,7 @@ export const IPHONE_MODELS = [
   "iPhone 12 Pro",
   "iPhone 12",
   "iPhone 12 mini",
+  "iPhone 11 Pro Max",
+  "iPhone 11 Pro",
+  "iPhone 11",
 ];

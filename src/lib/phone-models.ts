@@ -29,6 +29,9 @@ export const PHONE_MODELS: Record<PhoneBrand, string[]> = {
     "iPhone 12 Pro",
     "iPhone 12",
     "iPhone 12 mini",
+    "iPhone 11 Pro Max",
+    "iPhone 11 Pro",
+    "iPhone 11",
   ],
   Samsung: [
     "Galaxy S26 Ultra",
