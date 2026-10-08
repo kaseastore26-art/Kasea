@@ -115,9 +115,23 @@ useEffect(() => {
     isProtector &&
     p.title.toLowerCase().includes("protector de cámara solo para iphone 17");
 
+  const isGeneralCameraProtector =
+    isProtector && p.handle === "protector-de-camara";
+
+  const restrictedProModels = [
+    "iPhone 17 Pro",
+    "iPhone 17 Pro Max",
+    "iPhone 18 Pro",
+    "iPhone 18 Pro Max",
+  ];
+
   const availablePhoneModels = isRestrictedCameraProtector
-    ? ["iPhone 17 Pro", "iPhone 17 Pro Max", "iPhone 18 Pro", "iPhone 18 Pro Max"]
-    : PHONE_MODELS["iPhone"];
+    ? restrictedProModels
+    : isGeneralCameraProtector
+      ? PHONE_MODELS["iPhone"].filter(
+          (model) => !restrictedProModels.includes(model),
+        )
+      : PHONE_MODELS["iPhone"];
 
   const isGenericAccessory =
     productTags.includes("accesorios") ||
