@@ -110,6 +110,15 @@ useEffect(() => {
   const productTags = p.tags ?? [];
   const isProtector = productTags.includes("protectores");
 
+  // Estos protectores de cámara son exclusivos para iPhone 17/18 Pro.
+  const isRestrictedCameraProtector =
+    isProtector &&
+    p.title.toLowerCase().includes("protector de cámara solo para iphone 17");
+
+  const availablePhoneModels = isRestrictedCameraProtector
+    ? ["iPhone 17 Pro", "iPhone 17 Pro Max", "iPhone 18 Pro", "iPhone 18 Pro Max"]
+    : PHONE_MODELS["iPhone"];
+
   const isGenericAccessory =
     productTags.includes("accesorios") ||
     productTags.includes("colgantes") ||
@@ -305,16 +314,14 @@ if (typeof fbq === "function") {
         }}
       >
         <option value="">— Selecciona el modelo —</option>
-        {PHONE_MODELS["iPhone"].map((model) => {
-  return (
-    <option
-      key={model}
-      value={model}
-    >
-      {model}
-    </option>
-  );
-})}
+        {availablePhoneModels.map((model) => (
+          <option
+            key={model}
+            value={model}
+          >
+            {model}
+          </option>
+        ))}
       </select>
       {(!useCaseModelStock || !caseStockLoading) && modelOutOfStock && (
   <p className="mt-3 text-sm text-red-600">
