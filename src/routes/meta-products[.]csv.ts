@@ -120,13 +120,17 @@ export const Route = createFileRoute("/meta-products.csv")({
             tag.includes("sublim")
           );
 
+          const isFundasByTag = tags.some((tag) =>
+            ["fundas", "fundas para móviles", "fundas para moviles",
+             "transparentes", "fundas-sublimacion"].includes(tag)
+          );
+
+          const isFundasByCollection = /fundas|sublim/.test(collectionsText);
+
           const isFundas =
-            tags.some((tag) =>
-              ["fundas", "fundas para móviles", "fundas para moviles",
-               "transparentes", "fundas-sublimacion"].includes(tag)
-            ) ||
+            isFundasByTag ||
             isSublimacion ||
-            (tags.length === 0 && /fundas|sublim/.test(collectionsText));
+            isFundasByCollection;
 
           if (!isFundas) {
             continue;
