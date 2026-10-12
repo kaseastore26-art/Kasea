@@ -116,25 +116,33 @@ export const Route = createFileRoute("/meta-products.csv")({
             .join(" ")
             .toLowerCase();
 
-          const isSublimacion = tags.some((tag) =>
-            tag.includes("sublim")
-          );
+          const isSublimacion =
+            tags.some((tag) => tag.includes("sublim")) ||
+            /sublim/.test(collectionsText);
+
+          const title = String(product.title ?? "").trim().toLowerCase();
 
           const isFundasByTag = tags.some((tag) =>
             ["fundas", "fundas para móviles", "fundas para moviles",
-             "transparentes", "fundas-sublimacion"].includes(tag)
+             "transparentes", "fundas-sublimacion"].includes(tag) ||
+            tag.includes("funda")
           );
 
           const isFundasByCollection = /fundas|sublim/.test(collectionsText);
 
+          const isKaseaDesign =
+            title.startsWith("kasea ") || title === "funda personalizada";
+
           const isFundas =
-            isFundasByTag ||
             isSublimacion ||
-            isFundasByCollection;
+            isFundasByTag ||
+            isFundasByCollection ||
+            isKaseaDesign;
 
           if (!isFundas) {
             continue;
           }
+
 
           const productType = isSublimacion
             ? "fundas-sublimacion"
