@@ -94,28 +94,51 @@ export const Route = createFileRoute("/meta-products.csv")({
             (a, b) => a.position - b.position,
           );
 
-          const tags = product.tags ?? [];
+          const tags = (product.tags ?? []).map((tag) =>
+            String(tag).trim().toLowerCase()
+          );
 
-          const productType =
-            tags.includes("sublimacion")
-              ? "fundas-sublimacion"
-              : tags.includes("transparentes")
-                ? "fundas para móviles"
-                : tags.includes("colgantes")
-                  ? "cuerdas para el móvil"
-                  : tags.includes("protectores")
-                    ? "protectores"
-                    : tags.includes("cargadores")
-                      ? "cargadores"
-                      : tags.includes("otros")
-                        ? "otros accesorios"
-                        : "fundas para móviles";
+          const accessoryTags = [
+            "accesorios",
+            "colgantes",
+            "protectores",
+            "cargadores",
+            "otros",
+          ];
 
-          const isSublimacion = tags.includes("sublimacion");
+          // Excluir accesorios del catálogo publicitario de fundas.
+          if (tags.some((tag) => accessoryTags.includes(tag))) {
+            continue;
+          }
 
-const productLink = isSublimacion
-  ? `${SITE_URL}/product/${product.handle}?collection=fundas-sublimacion`
-  : `${SITE_URL}/product/${product.handle}`;
+          const collectionsText = collections
+            .map((c) => c.collections?.title ?? "")
+            .join(" ")
+            .toLowerCase();
+
+          const isSublimacion = tags.some((tag) =>
+            tag.includes("sublim")
+          );
+
+          const isFundas =
+            tags.some((tag) =>
+              ["fundas", "fundas para móviles", "fundas para moviles",
+               "transparentes", "fundas-sublimacion"].includes(tag)
+            ) ||
+            isSublimacion ||
+            (tags.length === 0 && /fundas|sublim/.test(collectionsText));
+
+          if (!isFundas) {
+            continue;
+          }
+
+          const productType = isSublimacion
+            ? "fundas-sublimacion"
+            : "fundas para móviles";
+
+          const productLink = isSublimacion
+            ? `${SITE_URL}/product/${product.handle}?collection=fundas-sublimacion`
+            : `${SITE_URL}/product/${product.handle}`;
 
           for (const variant of variants) {
             const currency = variant.currency || product.currency || "EUR";
