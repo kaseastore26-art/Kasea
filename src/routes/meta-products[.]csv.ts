@@ -46,6 +46,7 @@ export const Route = createFileRoute("/meta-products.csv")({
               url,
               position
             ),
+            tags,
             product_collections (
               position,
               collections (
@@ -93,12 +94,24 @@ export const Route = createFileRoute("/meta-products.csv")({
             (a, b) => a.position - b.position,
           );
 
-          const productType =
-           collections[0]?.collections?.title || "Fundas para móviles";
+          const tags = product.tags ?? [];
 
-         const isSublimacion = collections.some((c) =>
-           /sublim/i.test(c.collections?.title || ""),
-           );
+          const productType =
+            tags.includes("sublimacion")
+              ? "fundas-sublimacion"
+              : tags.includes("transparentes")
+                ? "fundas para móviles"
+                : tags.includes("colgantes")
+                  ? "cuerdas para el móvil"
+                  : tags.includes("protectores")
+                    ? "protectores"
+                    : tags.includes("cargadores")
+                      ? "cargadores"
+                      : tags.includes("otros")
+                        ? "otros accesorios"
+                        : "fundas para móviles";
+
+          const isSublimacion = tags.includes("sublimacion");
 
 const productLink = isSublimacion
   ? `${SITE_URL}/product/${product.handle}?collection=fundas-sublimacion`
