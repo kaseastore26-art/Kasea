@@ -100,11 +100,14 @@ export const updateCaseModelStock = createServerFn({ method: "POST" })
 
     const { error } = await context.supabase
       .from("case_model_stock")
-      .update({
-        stock: data.stock,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("model", data.model);
+      .upsert(
+        {
+          model: data.model,
+          stock: data.stock,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "model" },
+      );
 
     if (error) {
       throw new Error(error.message);
