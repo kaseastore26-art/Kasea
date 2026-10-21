@@ -359,19 +359,28 @@ function HomepageCarousel() {
     if (valid.length > 0) {
       return valid.map((r) => ({ src: r.image_url, alt: r.alt || r.title || "Kasea" }));
     }
-    return uploadedCarouselImages;
+    return [];
   }, [dbImages]);
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
+    if (images.length === 0) return;
+
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % images.length);
     }, 3500);
     return () => window.clearInterval(timer);
   }, [images.length]);
 
-  const goPrev = () => setActiveIndex((current) => (current - 1 + images.length) % images.length);
-  const goNext = () => setActiveIndex((current) => (current + 1) % images.length);
+  const goPrev = () => {
+    if (images.length === 0) return;
+    setActiveIndex((current) => (current - 1 + images.length) % images.length);
+  };
+
+  const goNext = () => {
+    if (images.length === 0) return;
+    setActiveIndex((current) => (current + 1) % images.length);
+  };
 
   return (
     <section id="galeria-home" className="border-y border-border/60 bg-secondary/30 py-20 md:py-28">
