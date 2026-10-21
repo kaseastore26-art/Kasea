@@ -18,27 +18,7 @@ const heroImg = "/brand/hero-kasea.png";
 const heroSecondImg = "/brand/hero-kasea-2.png";
 import lifestyleImg from "@/assets/promo-friends.png.asset.json";
 
-import carousel01 from "@/assets/carousel-01.png.asset.json";
-import carousel02 from "@/assets/carousel-02.png.asset.json";
-import carousel03 from "@/assets/carousel-03.png.asset.json";
-import carousel04 from "@/assets/carousel-04.png.asset.json";
-import carousel05 from "@/assets/carousel-05.png.asset.json";
-import carousel06 from "@/assets/carousel-06.png.asset.json";
-import carousel07 from "@/assets/carousel-07.png.asset.json";
-import carousel08 from "@/assets/carousel-08.png.asset.json";
-import carousel09 from "@/assets/carousel-09.png.asset.json";
 
-const uploadedCarouselImages = [
-  { src: carousel01.url, alt: "Funda Kasea lila con rayas y motivo veraniego" },
-  { src: carousel02.url, alt: "Funda Kasea turquesa con rayas y detalle gráfico rojo" },
-  { src: carousel03.url, alt: "Funda Kasea con rayas celestes y motivo de langosta" },
-  { src: carousel04.url, alt: "Funda Kasea de lunares con ilustración femenina" },
-  { src: carousel05.url, alt: "Funda Kasea de rayas azul marino con perro y taza" },
-  { src: carousel06.url, alt: "Funda Kasea rosa con lunares y gato ilustrado" },
-  { src: carousel07.url, alt: "Funda Kasea rosa con espiral y gato negro" },
-  { src: carousel08.url, alt: "Funda Kasea de lunares con perro y pañuelo animal print" },
-  { src: carousel09.url, alt: "Funda Kasea rosa con corazones y gato" },
-];
 
 export const Route = createFileRoute("/")({
   head: () =>
