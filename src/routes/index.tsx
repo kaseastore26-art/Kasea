@@ -348,39 +348,30 @@ function Benefits() {
 
 function HomepageCarousel() {
   const listFn = useServerFn(listCarouselImagesPublic);
-  const { data: dbImages, isLoading: isCarouselLoading } = useQuery({
+  const { data: dbImages } = useQuery({
     queryKey: ["carousel-images"],
     queryFn: () => listFn(),
     staleTime: 5 * 60_000,
   });
   const images = useMemo(() => {
-    // Mientras carga Supabase, no mostrar imágenes antiguas de la plantilla.
-    if (isCarouselLoading) return [];
-    
+    // Solo filas con URL válida; si no hay ninguna, usar las imágenes locales.
     const valid = (dbImages ?? []).filter((r) => r.image_url && r.image_url.trim() !== "");
-    return valid.map((r) => ({ src: r.image_url, alt: r.alt || r.title || "Kasea" }));
-  }, [dbImages, isCarouselLoading]);
+    if (valid.length > 0) {
+      return valid.map((r) => ({ src: r.image_url, alt: r.alt || r.title || "Kasea" }));
+    }
+    return uploadedCarouselImages;
+  }, [dbImages]);
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    if (images.length === 0) return;
-
     const timer = window.setInterval(() => {
       setActiveIndex((current) => (current + 1) % images.length);
     }, 3500);
-
     return () => window.clearInterval(timer);
   }, [images.length]);
 
-  const goPrev = () => {
-    if (images.length === 0) return;
-    setActiveIndex((current) => (current - 1 + images.length) % images.length);
-  };
-
-  const goNext = () => {
-    if (images.length === 0) return;
-    setActiveIndex((current) => (current + 1) % images.length);
-  };
+  const goPrev = () => setActiveIndex((current) => (current - 1 + images.length) % images.length);
+  const goNext = () => setActiveIndex((current) => (current + 1) % images.length);
 
   return (
     <section id="galeria-home" className="border-y border-border/60 bg-secondary/30 py-20 md:py-28">
@@ -813,5 +804,3 @@ function Newsletter() {
     </section>
   );
 }
-
-º
