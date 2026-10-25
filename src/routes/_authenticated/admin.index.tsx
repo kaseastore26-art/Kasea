@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Image, Package, LayoutGrid, ArrowRight, Receipt, Settings, UserCog, Type } from "lucide-react";
+import { Image, Package, LayoutGrid, ArrowRight, Receipt, Settings, UserCog, Type, Percent } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminIndex,
@@ -23,6 +23,12 @@ const CARDS = [
     icon: Settings,
     title: "Ajustes de envío",
     text: "Configura la tarifa de envío y el umbral de envío gratis.",
+  },
+  {
+    to: "/admin/descuentos" as const,
+    icon: Percent,
+    title: "Códigos de descuento",
+    text: "Genera códigos con el % que quieras para tarjetas, regalos o campañas, y mira cuáles se han usado.",
   },
   {
     to: "/admin/contenido" as const,
