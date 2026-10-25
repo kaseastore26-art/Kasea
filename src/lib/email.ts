@@ -2,6 +2,7 @@
 // Correo de confirmación de pedido — Resend vía API REST (sin SDK).
 // Solo servidor (usa process.env). Degrada con elegancia si falta la API key.
 // ============================================================================
+import { HOME_DELIVERY_LABEL } from "@/lib/pricing";
 
 export interface OrderEmailItem {
   title: string;
@@ -20,6 +21,8 @@ export interface OrderEmailData {
   totalCents: number;
   address?: Record<string, unknown> | null;
   paymentPending?: boolean;
+  /** Texto del código de descuento usado (si lo hay). */
+  discountNote?: string | null;
 }
 
 function euros(cents: number, currency = "EUR"): string {
@@ -34,6 +37,11 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
   );
+}
+
+function discountRow(note?: string | null): string {
+  if (!note) return "";
+  return `<tr><td colspan="2" style="padding:8px 0;color:#2e7d32;font-size:13px;">${escapeHtml(note)}</td></tr>`;
 }
 
 function buildHtml(data: OrderEmailData): string {
@@ -68,6 +76,7 @@ function buildHtml(data: OrderEmailData): string {
 </p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       ${rows}
+      ${discountRow(data.discountNote)}
       <tr><td style="padding:8px 0;color:#555;">Subtotal</td><td style="padding:8px 0;text-align:right;">${euros(data.subtotalCents, data.currency)}</td></tr>
       <tr><td style="padding:4px 0;color:#555;">Envío</td><td style="padding:4px 0;text-align:right;">${data.shippingCents === 0 ? "Gratis" : euros(data.shippingCents, data.currency)}</td></tr>
       <tr><td style="padding:8px 0;font-weight:bold;">Total</td><td style="padding:8px 0;text-align:right;font-weight:bold;">${euros(data.totalCents, data.currency)}</td></tr>
@@ -123,6 +132,7 @@ export interface AdminOrderEmailData {
   deliveryMethod: "delivery" | "pickup" | "nacex_point";
   address?: Record<string, unknown> | null;
   paymentNote?: string | null;
+  discountNote?: string | null;
   items: AdminOrderItem[];
   currency: string;
   subtotalCents: number;
@@ -181,12 +191,12 @@ const design = it.design
   data.deliveryMethod === "pickup"
     ? "Recoger en tienda"
     : data.deliveryMethod === "nacex_point"
-      ? `Recogida en punto NACEX${
+      ? `Recogida en punto${
           addressLine(data.address)
             ? `<br><strong>Código postal / zona:</strong> ${escapeHtml(addressLine(data.address))}`
             : ""
         }`
-      : `Envío a domicilio${
+      : `${HOME_DELIVERY_LABEL}${
           addressLine(data.address)
             ? `<br>${escapeHtml(addressLine(data.address))}`
             : ""
@@ -200,6 +210,7 @@ const design = it.design
       ${data.phone ? ` · ${escapeHtml(data.phone)}` : ""}<br>
       <strong>Entrega:</strong> ${entrega}
       ${data.paymentNote ? `<br><strong style="color:#b45309;">${escapeHtml(data.paymentNote)}</strong>` : ""}
+      ${data.discountNote ? `<br><strong style="color:#2e7d32;">${escapeHtml(data.discountNote)}</strong>` : ""}
     </p>
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       ${rows}

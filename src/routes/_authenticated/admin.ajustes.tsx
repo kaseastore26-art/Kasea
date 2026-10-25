@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getShopSettingsAdmin, updateShopSettings } from "@/lib/admin-catalog.functions";
+import { FREE_SHIPPING_MIN_ITEMS, HOME_DELIVERY_LABEL, NACEX_POINT_ENABLED } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/admin/ajustes")({
   component: AdminAjustes,
@@ -44,6 +45,7 @@ function AdminAjustes() {
       await saveFn({
         data: {
           shippingFlatEuros: parseFloat(flat) || 0,
+          // Aunque el campo esté oculto, se guarda el valor que ya había.
           shippingNacexEuros: parseFloat(nacex) || 0,
           freeThresholdEuros: parseFloat(threshold) || 0,
           notifyEmail: notifyEmail.trim(),
@@ -64,7 +66,7 @@ function AdminAjustes() {
       <div className="mb-6">
         <h2 className="font-display text-2xl">Ajustes de envío</h2>
         <p className="text-sm text-muted-foreground">
-          Configura la tarifa de envío y el importe a partir del cual el envío es gratis.
+          Configura la tarifa de envío y cuándo el envío es gratis.
         </p>
       </div>
 
@@ -79,7 +81,7 @@ function AdminAjustes() {
           </div>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="flat">Tarifa de envío (€)</Label>
+              <Label htmlFor="flat">{HOME_DELIVERY_LABEL} (€)</Label>
               <Input
                 id="flat"
                 type="number"
@@ -88,25 +90,29 @@ function AdminAjustes() {
                 value={flat}
                 onChange={(e) => setFlat(e.target.value)}
               />
-              <p className="mt-1 text-xs text-muted-foreground">Coste del envío a domicilio.</p>
-            </div>
-                       <div>
-              <Label htmlFor="nacex">Recogida en punto NACEX (€)</Label>
-              <Input
-                id="nacex"
-                type="number"
-                step="0.01"
-                min="0"
-                value={nacex}
-                onChange={(e) => setNacex(e.target.value)}
-              />
               <p className="mt-1 text-xs text-muted-foreground">
-                Coste de la recogida en un punto NACEX.
+                Coste del envío a domicilio (península). Con {FREE_SHIPPING_MIN_ITEMS} productos o más en el
+                pedido, el envío es gratis automáticamente.
               </p>
             </div>
 
+            {NACEX_POINT_ENABLED && (
+              <div>
+                <Label htmlFor="nacex">Recogida en punto (€)</Label>
+                <Input
+                  id="nacex"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={nacex}
+                  onChange={(e) => setNacex(e.target.value)}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">Coste de la recogida en un punto.</p>
+              </div>
+            )}
+
             <div>
-              <Label htmlFor="threshold">Envío gratis a partir de (€)</Label>
+              <Label htmlFor="threshold">Envío gratis también a partir de (€)</Label>
               <Input
                 id="threshold"
                 type="number"
@@ -116,7 +122,8 @@ function AdminAjustes() {
                 onChange={(e) => setThreshold(e.target.value)}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Pedidos con subtotal igual o superior a este importe no pagan envío.
+                Si el cliente compra un solo producto pero supera este importe, tampoco paga envío. Pon 0
+                para desactivarlo.
               </p>
             </div>
 

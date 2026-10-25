@@ -4,6 +4,8 @@
 // Seguridad (crítico, es producción con dinero):
 //   - El precio y el stock NUNCA se confían al cliente: se releen de Supabase.
 //   - Un producto inactivo o sin stock suficiente bloquea la compra.
+//   - El código de descuento se vuelve a comprobar aquí (no vale lo que diga
+//     el navegador) y el envío se recalcula con los precios del admin.
 //   - La secret key de Stripe vive solo en el servidor (process.env).
 //   - Sin SDK: se usa la API REST de Stripe vía fetch (cero dependencias).
 //
@@ -15,6 +17,15 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import {
+  DEFAULT_SHIPPING_SETTINGS,
+  HOME_DELIVERY_LABEL,
+  NACEX_POINT_ENABLED,
+  applyPercentDiscount,
+  computeShippingCents,
+  discountNoteText,
+  type ShippingSettings,
+} from "@/lib/pricing";
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -22,29 +33,30 @@ function publicClient() {
   });
 }
 
-// Coste de envío (autoritativo). La tarifa/umbral vienen de shop_settings
-// (editables en el admin). En recogida en tienda no hay coste de envío.
-function computeShipping(
-  deliveryMethod: "delivery" | "pickup" | "nacex_point",
-  postalCode?: string,
-  subtotalCents = 0,
-): number {
-  if (deliveryMethod === "pickup") return 0;
+// Tarifas de envío editables en el admin (tabla shop_settings).
+async function loadShippingSettings(
+  supabase: ReturnType<typeof publicClient>,
+): Promise<ShippingSettings> {
+  const { data } = await supabase
+    .from("shop_settings")
+    .select("shipping_flat_cents, shipping_nacex_cents, shipping_free_threshold_cents")
+    .eq("id", "default")
+    .maybeSingle();
+  return {
+    flatCents: data?.shipping_flat_cents ?? DEFAULT_SHIPPING_SETTINGS.flatCents,
+    nacexCents: data?.shipping_nacex_cents ?? DEFAULT_SHIPPING_SETTINGS.nacexCents,
+    freeThresholdCents:
+      data?.shipping_free_threshold_cents ?? DEFAULT_SHIPPING_SETTINGS.freeThresholdCents,
+  };
+}
 
-  if (deliveryMethod === "nacex_point") {
-    return 499;
-  }
-
-  // 07xxx = Islas Baleares
-  // Resto de códigos postales españoles = 7,99 €
-  const cp = (postalCode ?? "").replace(/\s/g, "");
-
-  if (/^07\d{3}$/.test(cp)) {
-    return 1799;
-  }
-
-    if (subtotalCents >= 5500) return 0;
-  return 799;
+// Comprueba el código de descuento (si viene). Devuelve null si no hay código.
+async function resolveDiscount(
+  raw?: string,
+): Promise<{ code: string; percent: number } | null | { error: string }> {
+  if (!raw || !raw.trim()) return null;
+  const { findValidDiscount } = await import("@/lib/discount.server");
+  return findValidDiscount(raw);
 }
 
 // Aplana un objeto/array a los pares clave-valor con notación de corchetes
@@ -89,9 +101,12 @@ const InputSchema = z.object({
   shippingProvince: z.string().trim().max(100).optional(),
   shippingCountry: z.string().trim().max(100).optional(),
 
-  // NACEX
+  // NACEX (desactivado de momento, se conserva por si se recupera)
   nacexPostalCode: z.string().trim().max(10).optional(),
   nacexAddress: z.string().trim().max(200).optional(),
+
+  // Código de descuento
+  discountCode: z.string().trim().max(60).optional(),
 
   origin: z.string().url().optional(),
 });
@@ -115,7 +130,11 @@ export type CheckoutResult = { url: string } | { error: string };
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => InputSchema.parse(d))
   .handler(async ({ data }): Promise<CheckoutResult> => {
-     // Validar los datos de envío en el servidor
+    if (data.deliveryMethod === "nacex_point" && !NACEX_POINT_ENABLED) {
+      return { error: "La recogida en punto ya no está disponible. Elige otra forma de entrega." };
+    }
+
+    // Validar los datos de envío en el servidor
     if (data.deliveryMethod === "delivery") {
       const cp = (data.shippingPostalCode ?? "").replace(/\s/g, "");
 
@@ -144,7 +163,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         !data.nacexAddress?.trim()
       ) {
         return {
-          error: "Completa los datos del punto NACEX.",
+          error: "Completa los datos del punto de recogida.",
         };
       }
     }
@@ -158,6 +177,11 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const base = (process.env.SITE_URL || data.origin || "").replace(/\/$/, "");
     if (!base) return { error: "No se pudo determinar la URL del sitio." };
 
+    // Código de descuento (se revalida aquí, en el servidor).
+    const discount = await resolveDiscount(data.discountCode);
+    if (discount && "error" in discount) return { error: discount.error };
+    const percent = discount ? discount.percent : 0;
+
     // 1) Revalidar cada línea contra Supabase (precio y stock reales).
     const supabase = publicClient();
     const ids = [...new Set(data.items.map((i) => i.variantId))];
@@ -170,7 +194,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const byId = new Map((rows as unknown as VariantRow[]).map((r) => [r.id, r]));
 
     const lineItems: unknown[] = [];
-    let subtotal = 0;
+    let subtotal = 0; // ya con el descuento aplicado
+    let originalSubtotal = 0;
+    let itemCount = 0;
     for (const item of data.items) {
       const v = byId.get(item.variantId);
       if (!v || !v.products || v.products.status !== "active") {
@@ -181,7 +207,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           error: `Sin stock suficiente de "${v.products.title}" (quedan ${v.stock}).`,
         };
       }
-      subtotal += v.price_cents * item.quantity;
+      const unitCents = applyPercentDiscount(v.price_cents, percent);
+      subtotal += unitCents * item.quantity;
+      originalSubtotal += v.price_cents * item.quantity;
+      itemCount += item.quantity;
 
       const img = [...(v.products.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url;
       const isDefault = !v.title || v.title === "Default Title";
@@ -189,16 +218,18 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
       // Atributos legibles (marca/modelo/diseño) para mostrar y para el pedido.
       const attrs = item.attributes ?? [];
-      const description = attrs
+      const attrText = attrs
         .filter((a) => !a.value.startsWith("http"))
         .map((a) => `${a.key}: ${a.value}`)
         .join(" · ");
+      const discountText = discount ? `Descuento ${discount.code} (−${percent} %)` : "";
+      const description = [attrText, discountText].filter(Boolean).join(" · ");
 
       lineItems.push({
         quantity: item.quantity,
         price_data: {
           currency: (v.currency || "eur").toLowerCase(),
-          unit_amount: v.price_cents,
+          unit_amount: unitCents,
           product_data: {
             name,
             ...(description ? { description } : {}),
@@ -212,26 +243,32 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         },
       });
     }
-   const ship = computeShipping(
-  data.deliveryMethod,
-  data.shippingPostalCode,
-  subtotal,
-);
-if (ship > 0) {
-  lineItems.push({
-    quantity: 1,
-    price_data: {
-      currency: "eur",
-      unit_amount: ship,
-      product_data: {
-        name:
-          data.deliveryMethod === "nacex_point"
-            ? "Recogida en punto NACEX"
-            : "Envío a domicilio",
-      },
-    },
-  });
-}
+
+    // 2) Envío (con las tarifas del admin y la regla de 2 productos = gratis).
+    const settings = await loadShippingSettings(supabase);
+    const ship = computeShippingCents(
+      data.deliveryMethod,
+      { postalCode: data.shippingPostalCode, subtotalCents: subtotal, itemCount },
+      settings,
+    );
+    if (ship > 0) {
+      lineItems.push({
+        quantity: 1,
+        price_data: {
+          currency: "eur",
+          unit_amount: ship,
+          product_data: {
+            name:
+              data.deliveryMethod === "nacex_point"
+                ? "Recogida en punto"
+                : HOME_DELIVERY_LABEL,
+          },
+        },
+      });
+    }
+
+    const discountCents = originalSubtotal - subtotal;
+
     // 3) Parámetros de la sesión de Stripe Checkout (hosted).
     const params: Record<string, unknown> = {
       mode: "payment",
@@ -241,64 +278,36 @@ if (ship > 0) {
       payment_method_types: ["card"],
       line_items: lineItems,
       metadata: {
-  delivery_method: data.deliveryMethod,
+        delivery_method: data.deliveryMethod,
 
-  customer_name: data.customerName ?? "",
-  customer_email: data.customerEmail ?? "",
-  customer_phone: data.customerPhone ?? "",
+        customer_name: data.customerName ?? "",
+        customer_email: data.customerEmail ?? "",
+        customer_phone: data.customerPhone ?? "",
 
-  shipping_address: data.shippingAddress ?? "",
-  shipping_postal_code: data.shippingPostalCode ?? "",
-  shipping_city: data.shippingCity ?? "",
-  shipping_province: data.shippingProvince ?? "",
-  shipping_country: data.shippingCountry ?? "",
+        shipping_address: data.shippingAddress ?? "",
+        shipping_postal_code: data.shippingPostalCode ?? "",
+        shipping_city: data.shippingCity ?? "",
+        shipping_province: data.shippingProvince ?? "",
+        shipping_country: data.shippingCountry ?? "",
 
-  ...(data.deliveryMethod === "nacex_point"
-    ? {
-        nacex_postal_code: data.nacexPostalCode ?? "",
-        nacex_address: data.nacexAddress ?? "",
-      }
-    : {}),
-},
+        ...(data.deliveryMethod === "nacex_point"
+          ? {
+              nacex_postal_code: data.nacexPostalCode ?? "",
+              nacex_address: data.nacexAddress ?? "",
+            }
+          : {}),
+
+        ...(discount
+          ? {
+              discount_code: discount.code,
+              discount_percent: String(percent),
+              discount_cents: String(discountCents),
+            }
+          : {}),
+      },
       success_url: `${base}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout`,
     };
-
-    if (data.deliveryMethod === "delivery") {
-  // Envío a domicilio: pide dirección (España) y cobra el envío calculado.
-  params.shipping_options = [
-    {
-      shipping_rate_data: {
-        type: "fixed_amount",
-        display_name: "Envío a domicilio",
-        fixed_amount: { amount: ship, currency: "eur" },
-      },
-    },
-  ];
-} else if (data.deliveryMethod === "nacex_point") {
-  // Recogida en punto NACEX: no pide dirección de envío en Kasea.
-  params.shipping_options = [
-    {
-      shipping_rate_data: {
-        type: "fixed_amount",
-        display_name: ship === 0 ? "NACEX gratis" : "Recogida en punto NACEX",
-        fixed_amount: { amount: ship, currency: "eur" },
-      },
-    },
-  ];
-} else {
-  // Recoger en tienda: sin dirección de envío y sin coste.
-  params.shipping_options = [
-    {
-      shipping_rate_data: {
-        type: "fixed_amount",
-        display_name: "Recoger en tienda",
-        fixed_amount: { amount: 0, currency: "eur" },
-      },
-    },
-  ];
-}
-params.shipping_options = undefined;
 
     const body = new URLSearchParams(toStripePairs(params)).toString();
 
@@ -333,6 +342,7 @@ const CashInputSchema = z.object({
   customerName: z.string().trim().min(1, "El nombre es obligatorio").max(120),
   phone: z.string().trim().min(3, "El teléfono es obligatorio").max(40),
   email: z.union([z.string().email(), z.literal("")]).optional(),
+  discountCode: z.string().trim().max(60).optional(),
 });
 
 export type CashOrderResult = { ref: string } | { error: string };
@@ -340,6 +350,10 @@ export type CashOrderResult = { ref: string } | { error: string };
 export const createCashPickupOrder = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => CashInputSchema.parse(d))
   .handler(async ({ data }): Promise<CashOrderResult> => {
+    const discount = await resolveDiscount(data.discountCode);
+    if (discount && "error" in discount) return { error: discount.error };
+    const percent = discount ? discount.percent : 0;
+
     const supabase = publicClient();
     const ids = [...new Set(data.items.map((i) => i.variantId))];
     const { data: rows, error } = await supabase
@@ -351,6 +365,7 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
     const byId = new Map((rows as unknown as VariantRow[]).map((r) => [r.id, r]));
 
     let subtotal = 0;
+    let originalSubtotal = 0;
     const rpcItems: Array<Record<string, unknown>> = [];
     for (const item of data.items) {
       const v = byId.get(item.variantId);
@@ -360,19 +375,25 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
       if (v.stock < item.quantity) {
         return { error: `Sin stock suficiente de "${v.products.title}" (quedan ${v.stock}).` };
       }
-      subtotal += v.price_cents * item.quantity;
+      const unitCents = applyPercentDiscount(v.price_cents, percent);
+      subtotal += unitCents * item.quantity;
+      originalSubtotal += v.price_cents * item.quantity;
       const isDefault = !v.title || v.title === "Default Title";
       const name = isDefault ? v.products.title : `${v.products.title} — ${v.title}`;
       rpcItems.push({
         variant_id: v.id,
         product_handle: v.products.handle,
         title: name,
-        unit_price_cents: v.price_cents,
+        unit_price_cents: unitCents,
         quantity: item.quantity,
         attributes: item.attributes ?? [],
         ...(item.customDesignId ? { custom_design_id: item.customDesignId } : {}),
       });
     }
+
+    const discountNote = discount
+      ? discountNoteText(discount.code, percent, originalSubtotal - subtotal)
+      : null;
 
     const currency = ((rows as unknown as VariantRow[])[0]?.currency || "eur").toUpperCase();
     const ref = `cash_${crypto.randomUUID()}`;
@@ -397,7 +418,13 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
       console.error("[cash-order] RPC falló:", rpcErr.message);
       return { error: "No se pudo registrar el pedido. Inténtalo de nuevo." };
     }
-    
+
+    // Marcar el código como usado.
+    if (discount) {
+      const { redeemDiscountCode } = await import("@/lib/discount.server");
+      await redeemDiscountCode(discount.code, ref);
+    }
+
     // Confirmación al cliente. En pedidos de pago en tienda,
     // el pago queda pendiente hasta que el cliente recoge el pedido.
     if (data.email) {
@@ -417,96 +444,98 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
           shippingCents: 0,
           totalCents: subtotal,
           paymentPending: true,
+          discountNote,
         });
       } catch (err) {
         console.error("[cash-order] Error enviando confirmación al cliente:", err);
       }
     }
     // Aviso al administrador (mejor esfuerzo; no bloquea la confirmación).
-try {
-  const { data: settingsRow } = await admin
-    .from("shop_settings")
-    .select("notify_email")
-    .eq("id", "default")
-    .maybeSingle();
+    try {
+      const { data: settingsRow } = await admin
+        .from("shop_settings")
+        .select("notify_email")
+        .eq("id", "default")
+        .maybeSingle();
 
-  const notifyEmail =
-    (settingsRow?.notify_email as string | null) ||
-    process.env.ADMIN_NOTIFY_EMAIL ||
-    "";
+      const notifyEmail =
+        (settingsRow?.notify_email as string | null) ||
+        process.env.ADMIN_NOTIFY_EMAIL ||
+        "";
 
-  if (notifyEmail) {
-    const { sendAdminOrderNotification } = await import("@/lib/email");
+      if (notifyEmail) {
+        const { sendAdminOrderNotification } = await import("@/lib/email");
 
-    const customDesignIds = rpcItems
-      .map((i) => i.custom_design_id)
-      .filter((id): id is string => Boolean(id));
+        const customDesignIds = rpcItems
+          .map((i) => i.custom_design_id)
+          .filter((id): id is string => Boolean(id));
 
-    let designs: Array<{
-      id: string;
-      model: string | null;
-      image_url: string | null;
-      preview_url: string | null;
-      text_content: string | null;
-      font: string | null;
-      color: string | null;
-    }> = [];
+        let designs: Array<{
+          id: string;
+          model: string | null;
+          image_url: string | null;
+          preview_url: string | null;
+          text_content: string | null;
+          font: string | null;
+          color: string | null;
+        }> = [];
 
-    if (customDesignIds.length > 0) {
-      const { data } = await admin
-        .from("custom_designs")
-        .select(
-          "id, model, image_url, preview_url, text_content, font, color"
-        )
-        .in("id", customDesignIds);
+        if (customDesignIds.length > 0) {
+          const { data } = await admin
+            .from("custom_designs")
+            .select(
+              "id, model, image_url, preview_url, text_content, font, color"
+            )
+            .in("id", customDesignIds);
 
-      designs = data ?? [];
+          designs = data ?? [];
+        }
+
+        await sendAdminOrderNotification({
+          to: notifyEmail,
+          customerName: data.customerName,
+          customerEmail: data.email || null,
+          phone: data.phone,
+          deliveryMethod: "pickup",
+          address: null,
+          paymentNote: `Pago en EFECTIVO — PENDIENTE de cobro en tienda (${(
+            subtotal / 100
+          ).toFixed(2)} ${currency})`,
+          discountNote,
+          items: rpcItems.map((i) => {
+            const design = designs.find(
+              (d) => d.id === i.custom_design_id
+            );
+
+            return {
+              title: String(i.title),
+              quantity: Number(i.quantity),
+              unit_price_cents: Number(i.unit_price_cents),
+              attributes:
+                (i.attributes as Array<{ key: string; value: string }>) ?? [],
+              design: design
+                ? {
+                    model: design.model,
+                    text: design.text_content,
+                    font: design.font,
+                    color: design.color,
+                    previewUrl:
+                      design.preview_url ||
+                      design.image_url ||
+                      null,
+                  }
+                : null,
+            };
+          }),
+          currency,
+          subtotalCents: subtotal,
+          shippingCents: 0,
+          totalCents: subtotal,
+        });
+      }
+    } catch {
+      /* el correo no debe bloquear el pedido */
     }
-
-    await sendAdminOrderNotification({
-      to: notifyEmail,
-      customerName: data.customerName,
-      customerEmail: data.email || null,
-      phone: data.phone,
-      deliveryMethod: "pickup",
-      address: null,
-      paymentNote: `Pago en EFECTIVO — PENDIENTE de cobro en tienda (${(
-        subtotal / 100
-      ).toFixed(2)} ${currency})`,
-      items: rpcItems.map((i) => {
-        const design = designs.find(
-          (d) => d.id === i.custom_design_id
-        );
-
-        return {
-          title: String(i.title),
-          quantity: Number(i.quantity),
-          unit_price_cents: Number(i.unit_price_cents),
-          attributes:
-            (i.attributes as Array<{ key: string; value: string }>) ?? [],
-          design: design
-            ? {
-                model: design.model,
-                text: design.text_content,
-                font: design.font,
-                color: design.color,
-                previewUrl:
-                  design.preview_url ||
-                  design.image_url ||
-                  null,
-              }
-            : null,
-        };
-      }),
-      currency,
-      subtotalCents: subtotal,
-      shippingCents: 0,
-      totalCents: subtotal,
-    });
-  }
-} catch {
-  /* el correo no debe bloquear el pedido */
-}
 
     return { ref };
   });

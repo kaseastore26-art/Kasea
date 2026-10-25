@@ -16,6 +16,7 @@
 // ============================================================================
 import { createFileRoute } from "@tanstack/react-router";
 import { sendOrderConfirmationEmail, sendAdminOrderNotification } from "@/lib/email";
+import { discountNoteText } from "@/lib/pricing";
 
 const encoder = new TextEncoder();
 
@@ -216,6 +217,21 @@ const orderAddress =
 
         const alreadyProcessed = (result as any)?.already_processed === true;
 
+        // Código de descuento usado en este pedido (si lo hay).
+        const discountCode: string = metadata.discount_code ?? "";
+        const discountNote = discountCode
+          ? discountNoteText(
+              discountCode,
+              Number(metadata.discount_percent ?? 0),
+              Number(metadata.discount_cents ?? 0),
+            )
+          : null;
+        if (discountCode) {
+          // Idempotente: aunque Stripe reintente, solo cuenta una vez por sesión.
+          const { redeemDiscountCode } = await import("@/lib/discount.server");
+          await redeemDiscountCode(discountCode, session.id);
+        }
+
         // Correos (solo la primera vez, no en reintentos de Stripe).
         if (!alreadyProcessed) {
           // 1) Confirmación al cliente.
@@ -234,6 +250,7 @@ const orderAddress =
               shippingCents,
               totalCents,
               address,
+              discountNote,
             });
           }
 
@@ -261,6 +278,7 @@ const orderAddress =
             phone: customerPhone,
             deliveryMethod,
             address: orderAddress,
+            discountNote,
               items: items.map((i: any) => {
                 const d = i.custom_design_id ? designsById[i.custom_design_id] : null;
                 return {

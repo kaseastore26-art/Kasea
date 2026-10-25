@@ -17,6 +17,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { BackButton } from "@/components/BackButton";
 import { CookieConsent } from "@/components/CookieConsent";
+import { PromoPopup } from "@/components/PromoPopup";
 import { SITE_URL } from "@/lib/seo";
 
 function NotFoundComponent() {
@@ -158,6 +159,7 @@ function AppInner() {
       <SiteFooter />
       <Toaster position="top-center" richColors />
       <CookieConsent />
+      <PromoPopup />
     </div>
   );
 }

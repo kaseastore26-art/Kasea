@@ -1,15 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ShoppingBag, ArrowLeft, Truck, Lock, Loader2, Store, CreditCard, Banknote } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Truck, Lock, Loader2, Store, CreditCard, Banknote, Tag, X, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useCartStore } from "@/lib/cart";
 import { formatPrice } from "@/lib/shopify";
 import { createCheckoutSession, createCashPickupOrder } from "@/lib/checkout.functions";
-
-type DeliveryMethod = "delivery" | "pickup" | "nacex_point";
+import { getShopSettingsPublic } from "@/lib/catalog.functions";
+import { validateDiscountCode } from "@/lib/discount.functions";
+import {
+  BALEARES_SHIPPING_CENTS,
+  DEFAULT_SHIPPING_SETTINGS,
+  FREE_SHIPPING_IN_BALEARES,
+  FREE_SHIPPING_MIN_ITEMS,
+  HOME_DELIVERY_LABEL,
+  NACEX_POINT_ENABLED,
+  applyPercentDiscount,
+  computeShippingCents,
+  isBalearesPostalCode,
+  qualifiesForFreeShipping,
+  type DeliveryMethod,
+  type ShippingSettings,
+} from "@/lib/pricing";
 
 export const Route = createFileRoute("/checkout/")({
   head: () => ({
@@ -27,6 +42,8 @@ function CheckoutPage() {
   const removeItem = useCartStore((s) => s.removeItem);
   const startCheckout = useServerFn(createCheckoutSession);
   const startCash = useServerFn(createCashPickupOrder);
+  const getSettings = useServerFn(getShopSettingsPublic);
+  const checkDiscount = useServerFn(validateDiscountCode);
   const [loading, setLoading] = useState(false);
   const [delivery, setDelivery] = useState<DeliveryMethod>("delivery");
   // Solo aplica a recogida en tienda: pagar ahora con tarjeta o en efectivo allí.
@@ -41,162 +58,229 @@ function CheckoutPage() {
   const [shippingCountry, setShippingCountry] = useState("España");
   const [nacexPostalCode, setNacexPostalCode] = useState("");
   const [nacexAddress, setNacexAddress] = useState("");
-  
+
+  // Código de descuento
+  const [codeInput, setCodeInput] = useState("");
+  const [discount, setDiscount] = useState<{ code: string; percent: number } | null>(null);
+  const [checkingCode, setCheckingCode] = useState(false);
+
+  // Tarifas de envío del admin
+  const { data: settingsData } = useQuery({
+    queryKey: ["shop-settings"],
+    queryFn: () => getSettings(),
+    staleTime: 60_000,
+  });
+  const settings: ShippingSettings = settingsData
+    ? {
+        flatCents: settingsData.shippingFlatCents,
+        nacexCents: settingsData.shippingNacexCents,
+        freeThresholdCents: settingsData.freeThresholdCents,
+      }
+    : DEFAULT_SHIPPING_SETTINGS;
+
+  const applyCode = async () => {
+    const code = codeInput.trim();
+    if (!code) return;
+    setCheckingCode(true);
+    try {
+      const res = await checkDiscount({ data: { code } });
+      if ("error" in res) {
+        setDiscount(null);
+        toast.error(res.error);
+        return;
+      }
+      setDiscount(res);
+      setCodeInput("");
+      toast.success(`Código ${res.code} aplicado: −${res.percent} %`);
+    } catch {
+      toast.error("No se pudo comprobar el código. Inténtalo de nuevo.");
+    } finally {
+      setCheckingCode(false);
+    }
+  };
+
   const onPay = async () => {
-  // Datos básicos obligatorios para cualquier pedido
-  if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
-    toast.error("Completa tus datos", {
-      description: "Necesitamos nombre, email y teléfono para continuar.",
-    });
-    return;
-  }
+    // Datos básicos obligatorios para cualquier pedido
+    if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+      toast.error("Completa tus datos", {
+        description: "Necesitamos nombre, email y teléfono para continuar.",
+      });
+      return;
+    }
 
-  // Envío a domicilio
-  if (delivery === "delivery") {
-    const cp = shippingPostalCode.trim();
+    // Envío a domicilio
+    if (delivery === "delivery") {
+      const cp = shippingPostalCode.trim();
 
+      if (
+        !shippingAddress.trim() ||
+        !cp ||
+        !shippingCity.trim() ||
+        !shippingProvince.trim() ||
+        !shippingCountry.trim()
+      ) {
+        toast.error("Completa la dirección de envío", {
+          description:
+            "Necesitamos dirección, código postal, ciudad, provincia y país.",
+        });
+        return;
+      }
+
+      if (!/^\d{5}$/.test(cp)) {
+        toast.error("Código postal no válido", {
+          description: "Introduce un código postal español de 5 cifras.",
+        });
+        return;
+      }
+    }
+
+    // Punto de recogida (desactivado de momento)
     if (
-      !shippingAddress.trim() ||
-      !cp ||
-      !shippingCity.trim() ||
-      !shippingProvince.trim() ||
-      !shippingCountry.trim()
+      delivery === "nacex_point" &&
+      (!nacexPostalCode.trim() || !nacexAddress.trim())
     ) {
-      toast.error("Completa la dirección de envío", {
+      toast.error("Completa los datos de recogida", {
         description:
-          "Necesitamos dirección, código postal, ciudad, provincia y país.",
+          "Necesitamos el código postal y la dirección o zona donde quieres recoger.",
       });
       return;
     }
 
-    if (!/^\d{5}$/.test(cp)) {
-      toast.error("Código postal no válido", {
-        description: "Introduce un código postal español de 5 cifras.",
+    setLoading(true);
+
+    try {
+      const res = await startCheckout({
+        data: {
+          items: items.map((i) => ({
+            variantId: i.variantId,
+            quantity: i.quantity,
+            attributes: i.attributes,
+            customDesignId: i.customDesignId,
+          })),
+
+          deliveryMethod: delivery,
+
+          customerName: customerName.trim(),
+          customerEmail: customerEmail.trim(),
+          customerPhone: customerPhone.trim(),
+
+          shippingAddress:
+            delivery === "delivery" ? shippingAddress.trim() : undefined,
+          shippingPostalCode:
+            delivery === "delivery" ? shippingPostalCode.trim() : undefined,
+          shippingCity:
+            delivery === "delivery" ? shippingCity.trim() : undefined,
+          shippingProvince:
+            delivery === "delivery" ? shippingProvince.trim() : undefined,
+          shippingCountry:
+            delivery === "delivery" ? shippingCountry.trim() : undefined,
+
+          nacexPostalCode:
+            delivery === "nacex_point" ? nacexPostalCode.trim() : undefined,
+          nacexAddress:
+            delivery === "nacex_point" ? nacexAddress.trim() : undefined,
+
+          discountCode: discount?.code,
+
+          origin: window.location.origin,
+        },
       });
-      return;
+
+      if ("url" in res) {
+        window.location.href = res.url;
+        return;
+      }
+
+      toast.error(res.error ?? "No se pudo iniciar el pago.");
+    } catch (error) {
+      console.error(error);
+      toast.error("No se pudo iniciar el pago", {
+        description: "Inténtalo de nuevo.",
+      });
+    } finally {
+      setLoading(false);
     }
-  }
-
-  // Punto NACEX
-  if (
-    delivery === "nacex_point" &&
-    (!nacexPostalCode.trim() || !nacexAddress.trim())
-  ) {
-    toast.error("Completa los datos de recogida NACEX", {
-      description:
-        "Necesitamos el código postal y la dirección o zona donde quieres recoger.",
-    });
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const res = await startCheckout({
-      data: {
-        items: items.map((i) => ({
-          variantId: i.variantId,
-          quantity: i.quantity,
-          attributes: i.attributes,
-          customDesignId: i.customDesignId,
-        })),
-
-        deliveryMethod: delivery,
-
-        customerName: customerName.trim(),
-        customerEmail: customerEmail.trim(),
-        customerPhone: customerPhone.trim(),
-
-        shippingAddress:
-          delivery === "delivery" ? shippingAddress.trim() : undefined,
-        shippingPostalCode:
-          delivery === "delivery" ? shippingPostalCode.trim() : undefined,
-        shippingCity:
-          delivery === "delivery" ? shippingCity.trim() : undefined,
-        shippingProvince:
-          delivery === "delivery" ? shippingProvince.trim() : undefined,
-        shippingCountry:
-          delivery === "delivery" ? shippingCountry.trim() : undefined,
-
-        nacexPostalCode:
-          delivery === "nacex_point" ? nacexPostalCode.trim() : undefined,
-        nacexAddress:
-          delivery === "nacex_point" ? nacexAddress.trim() : undefined,
-
-        origin: window.location.origin,
-      },
-    });
-
-    if ("url" in res) {
-      window.location.href = res.url;
-      return;
-    }
-
-    toast.error(res.error ?? "No se pudo iniciar el pago.");
-  } catch (error) {
-    console.error(error);
-    toast.error("No se pudo iniciar el pago", {
-      description: "Inténtalo de nuevo.",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
   // Recogida en tienda + pago en efectivo: registra el pedido sin pasar por Stripe.
   const onCashOrder = async () => {
-  if (!customerName.trim() || !customerPhone.trim()) {
-    toast.error("Completa tus datos", {
-      description: "Necesitamos tu nombre y teléfono para preparar tu pedido.",
-    });
-    return;
-  }
-
-  setLoading(true);
-
-  try {
-    const res = await startCash({
-      data: {
-        items: items.map((i) => ({
-          variantId: i.variantId,
-          quantity: i.quantity,
-          attributes: i.attributes,
-          customDesignId: i.customDesignId,
-        })),
-        customerName: customerName.trim(),
-        phone: customerPhone.trim(),
-        email: customerEmail.trim() || undefined,
-      },
-    });
-
-    if ("ref" in res) {
-      window.location.href = `/checkout/exito?session_id=${encodeURIComponent(res.ref)}`;
+    if (!customerName.trim() || !customerPhone.trim()) {
+      toast.error("Completa tus datos", {
+        description: "Necesitamos tu nombre y teléfono para preparar tu pedido.",
+      });
       return;
     }
 
-    toast.error("No se pudo registrar el pedido", {
-      description: res.error,
-    });
-  } catch (e) {
-    toast.error("No se pudo registrar el pedido", {
-      description: e instanceof Error ? e.message : undefined,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+
+    try {
+      const res = await startCash({
+        data: {
+          items: items.map((i) => ({
+            variantId: i.variantId,
+            quantity: i.quantity,
+            attributes: i.attributes,
+            customDesignId: i.customDesignId,
+          })),
+          customerName: customerName.trim(),
+          phone: customerPhone.trim(),
+          email: customerEmail.trim() || undefined,
+          discountCode: discount?.code,
+        },
+      });
+
+      if ("ref" in res) {
+        window.location.href = `/checkout/exito?session_id=${encodeURIComponent(res.ref)}`;
+        return;
+      }
+
+      toast.error("No se pudo registrar el pedido", {
+        description: res.error,
+      });
+    } catch (e) {
+      toast.error("No se pudo registrar el pedido", {
+        description: e instanceof Error ? e.message : undefined,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const isCash = delivery === "pickup" && payMethod === "cash";
   const currency = items[0]?.price.currencyCode ?? "EUR";
-  const subtotal = items.reduce((sum, i) => sum + parseFloat(i.price.amount) * i.quantity, 0);
-  const shipping =
-  delivery === "pickup"
-    ? 0
-    : delivery === "nacex_point"
-      ? 4.99
-      : /^07\d{3}$/.test(shippingPostalCode.trim())
-        ? 17.99
-        : subtotal >= 55 ? 0 : 7.99;
 
-   const total = subtotal + shipping;
+  // Importes en céntimos (mismas reglas que usa el servidor al cobrar).
+  const toCents = (amount: string) => Math.round(parseFloat(amount) * 100);
+  const itemCount = items.reduce((n, i) => n + i.quantity, 0);
+  const subtotalCents = items.reduce((sum, i) => sum + toCents(i.price.amount) * i.quantity, 0);
+  const discountedSubtotalCents = items.reduce(
+    (sum, i) => sum + applyPercentDiscount(toCents(i.price.amount), discount?.percent ?? 0) * i.quantity,
+    0,
+  );
+  const discountCents = subtotalCents - discountedSubtotalCents;
+  const shippingCents = computeShippingCents(
+    delivery,
+    { postalCode: shippingPostalCode, subtotalCents: discountedSubtotalCents, itemCount },
+    settings,
+  );
+  const totalCents = discountedSubtotalCents + shippingCents;
+
+  const subtotal = subtotalCents / 100;
+  const shipping = shippingCents / 100;
+  const total = totalCents / 100;
+
+  const baleares = isBalearesPostalCode(shippingPostalCode);
+  const freeShipping = qualifiesForFreeShipping(itemCount, discountedSubtotalCents, settings);
+  const homePriceText = baleares
+    ? freeShipping && FREE_SHIPPING_IN_BALEARES
+      ? "Gratis"
+      : `${formatPrice(BALEARES_SHIPPING_CENTS / 100, currency)} · Islas Baleares`
+    : freeShipping
+      ? "Gratis · tienes envío gratis"
+      : `${formatPrice(settings.flatCents / 100, currency)} · Gratis comprando ${FREE_SHIPPING_MIN_ITEMS} productos o más`;
+
+  // Aviso "añade otro producto y el envío es gratis"
+  const showFreeShippingNudge =
+    delivery === "delivery" && itemCount < FREE_SHIPPING_MIN_ITEMS && shippingCents > 0 && !baleares;
 
   if (items.length === 0) {
     return (
@@ -231,6 +315,26 @@ function CheckoutPage() {
         {/* Líneas del pedido */}
         <section>
           <h2 className="eyebrow mb-5">Tu pedido</h2>
+
+          {showFreeShippingNudge && (
+            <div className="mb-5 flex items-start gap-3 rounded-lg border border-espresso/20 bg-secondary/40 p-4">
+              <Gift className="mt-0.5 h-5 w-5 flex-shrink-0 text-espresso" strokeWidth={1.5} />
+              <div className="flex-1 text-sm">
+                <p className="font-medium text-espresso">Con la compra de tu segundo producto, el envío es gratis</p>
+                <p className="mt-0.5 text-muted-foreground">
+                  Añade una funda, una cuerda o un protector y te ahorras{" "}
+                  {formatPrice(shipping, currency)} de envío.
+                </p>
+                <Link
+                  to="/tienda"
+                  className="mt-2 inline-block text-xs font-medium uppercase tracking-[0.14em] text-espresso underline underline-offset-4"
+                >
+                  Añadir otro producto
+                </Link>
+              </div>
+            </div>
+          )}
+
           <ul className="divide-y divide-border/60 border-y border-border/60">
             {items.map((item) => {
               const img = item.product.node.images?.edges?.[0]?.node;
@@ -317,34 +421,36 @@ function CheckoutPage() {
                 />
                 <span className="flex-1">
                   <span className="flex items-center gap-2 font-medium">
-                    <Truck className="h-4 w-4" strokeWidth={1.5} /> Envío a domicilio
+                    <Truck className="h-4 w-4" strokeWidth={1.5} /> {HOME_DELIVERY_LABEL}
                   </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                   7,99 € · Envío a domicilio
-                </span>
+                  <span className="mt-1 block text-xs text-muted-foreground">{homePriceText}</span>
                 </span>
               </label>
-              <label
-                className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
-                  delivery === "nacex_point" ? "border-espresso bg-secondary/40" : "border-border hover:bg-secondary/20"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="delivery"
-                  className="mt-1 accent-espresso"
-                  checked={delivery === "nacex_point"}
-                  onChange={() => setDelivery("nacex_point")}
-                />
-                <span className="flex-1">
-                  <span className="flex items-center gap-2 font-medium">
-                    <Truck className="h-4 w-4" strokeWidth={1.5} /> Recogida en punto NACEX
+
+              {NACEX_POINT_ENABLED && (
+                <label
+                  className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
+                    delivery === "nacex_point" ? "border-espresso bg-secondary/40" : "border-border hover:bg-secondary/20"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="delivery"
+                    className="mt-1 accent-espresso"
+                    checked={delivery === "nacex_point"}
+                    onChange={() => setDelivery("nacex_point")}
+                  />
+                  <span className="flex-1">
+                    <span className="flex items-center gap-2 font-medium">
+                      <Truck className="h-4 w-4" strokeWidth={1.5} /> Recogida en punto
+                    </span>
+                    <span className="mt-1 block text-xs text-muted-foreground">
+                      {formatPrice(settings.nacexCents / 100, currency)} · Recogida en punto
+                    </span>
                   </span>
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                                    4,99 € · Recogida en punto NACEX
-                </span>
-                </span>
-              </label>
+                </label>
+              )}
+
               <label
                 className={`flex cursor-pointer items-start gap-3 rounded-lg border p-4 transition-colors ${
                   delivery === "pickup" ? "border-espresso bg-secondary/40" : "border-border hover:bg-secondary/20"
@@ -367,160 +473,163 @@ function CheckoutPage() {
                 </span>
               </label>
             </div>
-{/* Datos del cliente */}
-<div className="mt-5 border-t border-border/60 pt-5">
-  <p className="mb-4 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-    Tus datos
-  </p>
 
-  <div className="space-y-3">
-    <div>
-      <label className="mb-1 block text-xs font-medium">
-        Nombre y apellidos *
-      </label>
-      <Input
-        value={customerName}
-        onChange={(e) => setCustomerName(e.target.value)}
-        placeholder="Tu nombre y apellidos"
-      />
-    </div>
+            {/* Datos del cliente */}
+            <div className="mt-5 border-t border-border/60 pt-5">
+              <p className="mb-4 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                Tus datos
+              </p>
 
-    <div>
-      <label className="mb-1 block text-xs font-medium">
-        Email *
-      </label>
-      <Input
-        type="email"
-        value={customerEmail}
-        onChange={(e) => setCustomerEmail(e.target.value)}
-        placeholder="tu@email.com"
-      />
-    </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium">
+                    Nombre y apellidos *
+                  </label>
+                  <Input
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    placeholder="Tu nombre y apellidos"
+                  />
+                </div>
 
-    <div>
-      <label className="mb-1 block text-xs font-medium">
-        Teléfono *
-      </label>
-      <Input
-        type="tel"
-        value={customerPhone}
-        onChange={(e) => setCustomerPhone(e.target.value)}
-        placeholder="Tu teléfono"
-      />
-    </div>
-  </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium">
+                    Email *
+                  </label>
+                  <Input
+                    type="email"
+                    value={customerEmail}
+                    onChange={(e) => setCustomerEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                  />
+                </div>
 
-  {delivery === "delivery" && (
-    <div className="mt-5 border-t border-border/60 pt-5">
-      <p className="mb-4 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-        Dirección de envío
-      </p>
+                <div>
+                  <label className="mb-1 block text-xs font-medium">
+                    Teléfono *
+                  </label>
+                  <Input
+                    type="tel"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value)}
+                    placeholder="Tu teléfono"
+                  />
+                </div>
+              </div>
 
-      <div className="space-y-3">
-        <div>
-          <label className="mb-1 block text-xs font-medium">
-            Dirección *
-          </label>
-          <Input
-            value={shippingAddress}
-            onChange={(e) => setShippingAddress(e.target.value)}
-            placeholder="Calle, número, piso..."
-          />
-        </div>
+              {delivery === "delivery" && (
+                <div className="mt-5 border-t border-border/60 pt-5">
+                  <p className="mb-4 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    Dirección de envío
+                  </p>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium">
-              Código postal *
-            </label>
-            <Input
-              value={shippingPostalCode}
-              onChange={(e) =>
-                setShippingPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))
-              }
-              placeholder="46100"
-              inputMode="numeric"
-              maxLength={5}
-            />
-          </div>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium">
+                        Dirección *
+                      </label>
+                      <Input
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="Calle, número, piso..."
+                      />
+                    </div>
 
-          <div>
-            <label className="mb-1 block text-xs font-medium">
-              Ciudad *
-            </label>
-            <Input
-              value={shippingCity}
-              onChange={(e) => setShippingCity(e.target.value)}
-              placeholder="Ciudad"
-            />
-          </div>
-        </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="mb-1 block text-xs font-medium">
+                          Código postal *
+                        </label>
+                        <Input
+                          value={shippingPostalCode}
+                          onChange={(e) =>
+                            setShippingPostalCode(e.target.value.replace(/\D/g, "").slice(0, 5))
+                          }
+                          placeholder="46100"
+                          inputMode="numeric"
+                          maxLength={5}
+                        />
+                      </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium">
-            Provincia *
-          </label>
-          <Input
-            value={shippingProvince}
-            onChange={(e) => setShippingProvince(e.target.value)}
-            placeholder="Provincia"
-          />
-        </div>
+                      <div>
+                        <label className="mb-1 block text-xs font-medium">
+                          Ciudad *
+                        </label>
+                        <Input
+                          value={shippingCity}
+                          onChange={(e) => setShippingCity(e.target.value)}
+                          placeholder="Ciudad"
+                        />
+                      </div>
+                    </div>
 
-        <div>
-          <label className="mb-1 block text-xs font-medium">
-            País *
-          </label>
-          <Input
-            value={shippingCountry}
-            onChange={(e) => setShippingCountry(e.target.value)}
-            placeholder="España"
-          />
-        </div>
-      </div>
-    </div>
-  )}
-</div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium">
+                        Provincia *
+                      </label>
+                      <Input
+                        value={shippingProvince}
+                        onChange={(e) => setShippingProvince(e.target.value)}
+                        placeholder="Provincia"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1 block text-xs font-medium">
+                        País *
+                      </label>
+                      <Input
+                        value={shippingCountry}
+                        onChange={(e) => setShippingCountry(e.target.value)}
+                        placeholder="España"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Punto de recogida (desactivado de momento) */}
+            {NACEX_POINT_ENABLED && delivery === "nacex_point" && (
+              <div className="mt-5 border-t border-border/60 pt-5">
+                <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Datos para la recogida
+                </p>
+
+                <p className="mb-4 text-xs text-muted-foreground">
+                  Indica el código postal y la zona donde quieres recoger tu pedido.
+                </p>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Código postal *
+                    </label>
+                    <Input
+                      value={nacexPostalCode}
+                      onChange={(e) => setNacexPostalCode(e.target.value)}
+                      placeholder="Ej.: 46100"
+                      inputMode="numeric"
+                      maxLength={10}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-xs font-medium">
+                      Dirección o zona donde quieres recoger *
+                    </label>
+                    <Input
+                      value={nacexAddress}
+                      onChange={(e) => setNacexAddress(e.target.value)}
+                      placeholder="Ej.: Burjassot, zona centro"
+                      maxLength={200}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Recogida en tienda: elegir pagar ahora con tarjeta o en efectivo allí. */}
-           {delivery === "nacex_point" && (
-  <div className="mt-5 border-t border-border/60 pt-5">
-    <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
-      Datos para la recogida NACEX
-    </p>
-
-    <p className="mb-4 text-xs text-muted-foreground">
-      Indica el código postal y la zona donde quieres recoger tu pedido.
-      Estos datos nos sirven para localizar el punto NACEX adecuado.
-    </p>
-
-    <div className="space-y-3">
-      <div>
-        <label className="mb-1 block text-xs font-medium">
-          Código postal *
-        </label>
-        <Input
-          value={nacexPostalCode}
-          onChange={(e) => setNacexPostalCode(e.target.value)}
-          placeholder="Ej.: 46100"
-          inputMode="numeric"
-          maxLength={10}
-        />
-      </div>
-
-      <div>
-        <label className="mb-1 block text-xs font-medium">
-          Dirección o zona donde quieres recoger *
-        </label>
-        <Input
-          value={nacexAddress}
-          onChange={(e) => setNacexAddress(e.target.value)}
-          placeholder="Ej.: Burjassot, zona centro"
-          maxLength={200}
-        />
-      </div>
-    </div>
-  </div>
-)}
             {delivery === "pickup" && (
               <div className="mt-5 border-t border-border/60 pt-5">
                 <p className="mb-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
@@ -569,7 +678,6 @@ function CheckoutPage() {
                     </span>
                   </label>
                 </div>
-
               </div>
             )}
           </div>
@@ -577,11 +685,69 @@ function CheckoutPage() {
           <div className="rounded-xl border border-border/60 bg-card p-6">
             <h2 className="eyebrow mb-5">Resumen</h2>
 
+            {/* Código de descuento */}
+            <div className="mb-5 border-b border-border/60 pb-5">
+              {discount ? (
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-espresso/30 bg-secondary/40 px-3 py-2.5">
+                  <span className="flex items-center gap-2 text-sm">
+                    <Tag className="h-4 w-4 text-espresso" strokeWidth={1.5} />
+                    <span className="font-medium">{discount.code}</span>
+                    <span className="text-muted-foreground">−{discount.percent} %</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDiscount(null)}
+                    className="rounded p-1 text-muted-foreground hover:bg-secondary hover:text-espresso"
+                    aria-label="Quitar código"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    ¿Tienes un código de descuento?
+                  </label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          applyCode();
+                        }
+                      }}
+                      placeholder="Escribe tu código"
+                      maxLength={40}
+                      autoCapitalize="characters"
+                      autoComplete="off"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={applyCode}
+                      disabled={checkingCode || !codeInput.trim()}
+                      className="shrink-0"
+                    >
+                      {checkingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : "Aplicar"}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <div className="space-y-3 text-sm">
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="tabular-nums">{formatPrice(subtotal, currency)}</span>
               </div>
+              {discount && discountCents > 0 && (
+                <div className="flex items-baseline justify-between text-espresso">
+                  <span>Descuento ({discount.percent} %)</span>
+                  <span className="tabular-nums">−{formatPrice(discountCents / 100, currency)}</span>
+                </div>
+              )}
               <div className="flex items-baseline justify-between">
                 <span className="text-muted-foreground">
                   {delivery === "pickup" ? "Recogida en tienda" : "Envío"}
