@@ -102,7 +102,8 @@ export function PromoPopup() {
               lo que quieras y disfruta del <strong className="font-medium text-espresso">envío gratis</strong>.
             </>
           ),
-          cta: "Descubrir la colección",
+          cta: "Descubrir las fundas",
+          ctaTo: "/fundas-sublimacion" as const,
           dismiss: "Ahora no, gracias",
         }
       : {
@@ -117,6 +118,7 @@ export function PromoPopup() {
             </>
           ),
           cta: "Añadir otro producto",
+          ctaTo: "/tienda" as const,
           dismiss: "Continuar con mi pedido",
         };
 
@@ -165,7 +167,7 @@ export function PromoPopup() {
         <p className="mx-auto mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">{content.text}</p>
 
         <Link
-          to="/tienda"
+          to={content.ctaTo}
           onClick={close}
           className="mt-7 inline-flex h-12 w-full items-center justify-center bg-espresso px-6 text-xs font-medium uppercase tracking-[0.2em] text-ivory transition hover:bg-espresso/90"
         >
