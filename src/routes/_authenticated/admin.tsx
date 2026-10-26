@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet, Link, useNavigate, redirect } from "@tanstack/react-router";
-import { LogOut, Image, Package, LayoutDashboard, LayoutGrid, Receipt, Settings, UserCog, Type, Percent } from "lucide-react";
+import { LogOut, Image, Package, LayoutDashboard, LayoutGrid, Receipt, Settings, UserCog, Type, Percent, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { checkIsAdmin } from "@/lib/admin.functions";
@@ -80,6 +80,12 @@ function AdminLayout() {
             className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-secondary aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
           >
             <Receipt className="h-4 w-4" /> Pedidos
+          </Link>
+          <Link
+            to="/admin/imprimir"
+            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-secondary aria-[current=page]:bg-primary aria-[current=page]:text-primary-foreground"
+          >
+            <Printer className="h-4 w-4" /> Imprimir
           </Link>
           <Link
             to="/admin/ajustes"

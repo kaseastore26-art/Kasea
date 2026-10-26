@@ -40,6 +40,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminStockFundasRouteImport } from './routes/_authenticated/admin.stock-fundas'
 import { Route as AuthenticatedAdminProductosRouteImport } from './routes/_authenticated/admin.productos'
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated/admin.pedidos'
+import { Route as AuthenticatedAdminImprimirRouteImport } from './routes/_authenticated/admin.imprimir'
 import { Route as AuthenticatedAdminDescuentosRouteImport } from './routes/_authenticated/admin.descuentos'
 import { Route as AuthenticatedAdminCuentaRouteImport } from './routes/_authenticated/admin.cuenta'
 import { Route as AuthenticatedAdminContenidoRouteImport } from './routes/_authenticated/admin.contenido'
@@ -204,6 +205,12 @@ const AuthenticatedAdminPedidosRoute =
     path: '/pedidos',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminImprimirRoute =
+  AuthenticatedAdminImprimirRouteImport.update({
+    id: '/imprimir',
+    path: '/imprimir',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminDescuentosRoute =
   AuthenticatedAdminDescuentosRouteImport.update({
     id: '/descuentos',
@@ -274,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/admin/contenido': typeof AuthenticatedAdminContenidoRoute
   '/admin/cuenta': typeof AuthenticatedAdminCuentaRoute
   '/admin/descuentos': typeof AuthenticatedAdminDescuentosRoute
+  '/admin/imprimir': typeof AuthenticatedAdminImprimirRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/admin/stock-fundas': typeof AuthenticatedAdminStockFundasRoute
@@ -311,6 +319,7 @@ export interface FileRoutesByTo {
   '/admin/contenido': typeof AuthenticatedAdminContenidoRoute
   '/admin/cuenta': typeof AuthenticatedAdminCuentaRoute
   '/admin/descuentos': typeof AuthenticatedAdminDescuentosRoute
+  '/admin/imprimir': typeof AuthenticatedAdminImprimirRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/admin/stock-fundas': typeof AuthenticatedAdminStockFundasRoute
@@ -351,6 +360,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/contenido': typeof AuthenticatedAdminContenidoRoute
   '/_authenticated/admin/cuenta': typeof AuthenticatedAdminCuentaRoute
   '/_authenticated/admin/descuentos': typeof AuthenticatedAdminDescuentosRoute
+  '/_authenticated/admin/imprimir': typeof AuthenticatedAdminImprimirRoute
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/productos': typeof AuthenticatedAdminProductosRoute
   '/_authenticated/admin/stock-fundas': typeof AuthenticatedAdminStockFundasRoute
@@ -391,6 +401,7 @@ export interface FileRouteTypes {
     | '/admin/contenido'
     | '/admin/cuenta'
     | '/admin/descuentos'
+    | '/admin/imprimir'
     | '/admin/pedidos'
     | '/admin/productos'
     | '/admin/stock-fundas'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/admin/contenido'
     | '/admin/cuenta'
     | '/admin/descuentos'
+    | '/admin/imprimir'
     | '/admin/pedidos'
     | '/admin/productos'
     | '/admin/stock-fundas'
@@ -467,6 +479,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/contenido'
     | '/_authenticated/admin/cuenta'
     | '/_authenticated/admin/descuentos'
+    | '/_authenticated/admin/imprimir'
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/productos'
     | '/_authenticated/admin/stock-fundas'
@@ -717,6 +730,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/imprimir': {
+      id: '/_authenticated/admin/imprimir'
+      path: '/imprimir'
+      fullPath: '/admin/imprimir'
+      preLoaderRoute: typeof AuthenticatedAdminImprimirRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/admin/descuentos': {
       id: '/_authenticated/admin/descuentos'
       path: '/descuentos'
@@ -769,6 +789,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminContenidoRoute: typeof AuthenticatedAdminContenidoRoute
   AuthenticatedAdminCuentaRoute: typeof AuthenticatedAdminCuentaRoute
   AuthenticatedAdminDescuentosRoute: typeof AuthenticatedAdminDescuentosRoute
+  AuthenticatedAdminImprimirRoute: typeof AuthenticatedAdminImprimirRoute
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
   AuthenticatedAdminProductosRoute: typeof AuthenticatedAdminProductosRoute
   AuthenticatedAdminStockFundasRoute: typeof AuthenticatedAdminStockFundasRoute
@@ -782,6 +803,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminContenidoRoute: AuthenticatedAdminContenidoRoute,
   AuthenticatedAdminCuentaRoute: AuthenticatedAdminCuentaRoute,
   AuthenticatedAdminDescuentosRoute: AuthenticatedAdminDescuentosRoute,
+  AuthenticatedAdminImprimirRoute: AuthenticatedAdminImprimirRoute,
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
   AuthenticatedAdminProductosRoute: AuthenticatedAdminProductosRoute,
   AuthenticatedAdminStockFundasRoute: AuthenticatedAdminStockFundasRoute,

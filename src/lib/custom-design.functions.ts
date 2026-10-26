@@ -6,7 +6,8 @@ const UploadSchema = z.object({
   dataUrl: z
     .string()
     .regex(/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/, "Formato de imagen no válido")
-    .max(8_000_000, "La imagen es demasiado grande"),
+    // La foto original (hasta 3600 px en JPEG) para poder imprimir a 300 ppp.
+    .max(16_000_000, "La imagen es demasiado grande"),
 });
 
 // Guarda TODOS los datos del diseño personalizado para producción (visible en

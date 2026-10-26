@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Image, Package, LayoutGrid, ArrowRight, Receipt, Settings, UserCog, Type, Percent } from "lucide-react";
+import { Image, Package, LayoutGrid, ArrowRight, Receipt, Settings, UserCog, Type, Percent, Printer } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/")({
   component: AdminIndex,
@@ -17,6 +17,12 @@ const CARDS = [
     icon: Receipt,
     title: "Pedidos",
     text: "Consulta pedidos, cambia su estado y revisa los diseños personalizados.",
+  },
+  {
+    to: "/admin/imprimir" as const,
+    icon: Printer,
+    title: "Fundas para imprimir",
+    text: "Descarga las fundas personalizadas ya montadas en su plantilla, listas para Photoshop.",
   },
   {
     to: "/admin/ajustes" as const,

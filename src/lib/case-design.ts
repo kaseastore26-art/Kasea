@@ -1,0 +1,303 @@
+// ============================================================================
+// Geometría de las fundas personalizadas (sublimación 3D).
+//
+// Todo se mide en MILÍMETROS reales. La foto se describe con una transformación
+// relativa al CENTRO de la plantilla (que coincide con el centro de la parte
+// trasera de la funda). Así el mismo diseño se puede pintar:
+//   - en el editor (a cualquier tamaño de pantalla),
+//   - en la vista previa del carrito,
+//   - y en el archivo de impresión a 300 ppp con la plantilla real.
+// ============================================================================
+
+/** Píxeles por milímetro a 300 ppp (las plantillas de Photoshop son de 300 ppp). */
+export const PX_PER_MM = 300 / 25.4;
+
+export type TemplateId = "pequena" | "grande";
+
+export interface PrintTemplate {
+  id: TemplateId;
+  label: string;
+  /** Tamaño total del lienzo en píxeles (300 ppp, RGB), igual que el .psd. */
+  widthPx: number;
+  heightPx: number;
+  /** Rectángulo de la parte trasera (entre las guías del .psd). */
+  back: { x: number; y: number; w: number; h: number };
+}
+
+// Medidas sacadas de las plantillas de Photoshop de Kasea.
+export const TEMPLATES: Record<TemplateId, PrintTemplate> = {
+  pequena: {
+    id: "pequena",
+    label: "Plantilla pequeña",
+    widthPx: 1240,
+    heightPx: 2126,
+    back: { x: 177, y: 177, w: 886, h: 1772 },
+  },
+  grande: {
+    id: "grande",
+    label: "Plantilla grande",
+    widthPx: 1393,
+    heightPx: 2303,
+    back: { x: 177, y: 177, w: 1039, h: 1949 },
+  },
+};
+
+/** Hoja de papel de sublimación: 150 × 240 mm a 300 ppp. */
+export const PRINT_SHEET = {
+  widthMm: 150,
+  heightMm: 240,
+  widthPx: Math.round(150 * (300 / 25.4)), // 1772
+  heightPx: Math.round(240 * (300 / 25.4)), // 2835
+};
+
+/** Pro Max, Plus y Air usan la plantilla grande; el resto, la pequeña. */
+export function templateForModel(model: string): TemplateId {
+  return /pro max|plus|air/i.test(model) ? "grande" : "pequena";
+}
+
+/** Tamaño total de la plantilla en mm (incluye los laterales). */
+export function templateSizeMm(id: TemplateId): { w: number; h: number } {
+  const t = TEMPLATES[id];
+  return { w: t.widthPx / PX_PER_MM, h: t.heightPx / PX_PER_MM };
+}
+
+// ---------------------------------------------------------------------------
+// Modelos (medidas reales aproximadas y módulo de cámara)
+// ---------------------------------------------------------------------------
+export type ModelSpec = {
+  ratio: string; // "ancho / alto" en mm
+  radius: number; // radio de las esquinas, % del ancho
+  cam: "square" | "vertical" | "wide";
+  camW: number; // ancho del módulo de cámara, % del ancho de la funda
+  camRatio: string; // proporción ancho / alto del módulo
+  camLeft?: number; // % del ancho
+  camTop?: number; // % del alto
+};
+
+export const MODEL_SPECS: Record<string, ModelSpec> = {
+  "iPhone 18 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 90, camRatio: "2.28 / 1", camTop: 2.8 },
+  "iPhone 18 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 90, camRatio: "2.2 / 1", camTop: 2.8 },
+  "iPhone 17 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 90, camRatio: "2.28 / 1", camTop: 2.8 },
+  "iPhone 17 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 90, camRatio: "2.2 / 1", camTop: 2.8 },
+  "iPhone 17 Air": { ratio: "74.7 / 156.2", radius: 13, cam: "wide", camW: 88, camRatio: "2.55 / 1", camTop: 3 },
+  "iPhone 17": { ratio: "71.9 / 149.6", radius: 13, cam: "vertical", camW: 28, camRatio: "0.55 / 1", camLeft: 5, camTop: 3.2 },
+  "iPhone 16 Pro Max": { ratio: "77.6 / 163", radius: 12.5, cam: "square", camW: 49, camRatio: "1 / 1" },
+  "iPhone 16 Pro": { ratio: "71.5 / 149.6", radius: 12.5, cam: "square", camW: 51, camRatio: "1 / 1" },
+  "iPhone 16 Plus": { ratio: "77.8 / 160.9", radius: 12.5, cam: "vertical", camW: 25, camRatio: "0.55 / 1" },
+  "iPhone 16": { ratio: "71.6 / 147.6", radius: 12.5, cam: "vertical", camW: 27, camRatio: "0.55 / 1" },
+  "iPhone 15 Pro Max": { ratio: "76.7 / 159.9", radius: 12.5, cam: "square", camW: 50, camRatio: "1 / 1" },
+  "iPhone 15 Pro": { ratio: "70.6 / 146.6", radius: 12.5, cam: "square", camW: 52, camRatio: "1 / 1" },
+  "iPhone 15 Plus": { ratio: "77.8 / 160.9", radius: 12.5, cam: "square", camW: 38, camRatio: "1 / 1" },
+  "iPhone 15": { ratio: "71.6 / 147.6", radius: 12.5, cam: "square", camW: 40, camRatio: "1 / 1" },
+  "iPhone 14 Pro Max": { ratio: "77.6 / 160.7", radius: 12, cam: "square", camW: 49, camRatio: "1 / 1" },
+  "iPhone 14 Pro": { ratio: "71.5 / 147.5", radius: 12, cam: "square", camW: 52, camRatio: "1 / 1" },
+  "iPhone 14 Plus": { ratio: "78.1 / 160.8", radius: 12, cam: "square", camW: 37, camRatio: "1 / 1" },
+  "iPhone 14": { ratio: "71.5 / 146.7", radius: 12, cam: "square", camW: 39, camRatio: "1 / 1" },
+  "iPhone 13 Pro Max": { ratio: "78.1 / 160.8", radius: 11.5, cam: "square", camW: 47, camRatio: "1 / 1" },
+  "iPhone 13 Pro": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 49, camRatio: "1 / 1" },
+  "iPhone 13": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 38, camRatio: "1 / 1" },
+  "iPhone 13 mini": { ratio: "64.2 / 131.5", radius: 11.5, cam: "square", camW: 41, camRatio: "1 / 1" },
+  "iPhone 12 Pro Max": { ratio: "78.1 / 160.8", radius: 11, cam: "square", camW: 43, camRatio: "1 / 1" },
+  "iPhone 12 Pro": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 43, camRatio: "1 / 1" },
+  "iPhone 12": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 36, camRatio: "1 / 1" },
+  "iPhone 12 mini": { ratio: "64.2 / 131.5", radius: 11, cam: "square", camW: 39, camRatio: "1 / 1" },
+};
+
+export const MODELS = Object.keys(MODEL_SPECS);
+
+function parseRatio(r: string): [number, number] {
+  const [a, b] = r.split("/").map((n) => Number(n.trim()));
+  return [a || 1, b || 1];
+}
+
+export function specFor(model: string): ModelSpec {
+  return MODEL_SPECS[model] ?? MODEL_SPECS["iPhone 17 Pro"];
+}
+
+/** Medidas de la parte trasera de la funda en mm. */
+export function caseSizeMm(spec: ModelSpec): { w: number; h: number; r: number } {
+  const [w, h] = parseRatio(spec.ratio);
+  return { w, h, r: (spec.radius / 100) * w };
+}
+
+// ---------------------------------------------------------------------------
+// Transformación de la foto
+// ---------------------------------------------------------------------------
+export type Rotation = 0 | 90 | 180 | 270;
+
+/** Posición de la foto en mm respecto al centro de la plantilla. */
+export interface PhotoTransform {
+  cx: number;
+  cy: number;
+  /** Ancho de la foto (sin girar) en mm. */
+  w: number;
+  rot: Rotation;
+}
+
+/** Hasta cuántas veces se puede ampliar sobre el tamaño mínimo. */
+export const MAX_ZOOM = 5;
+
+/** Ancho mínimo para que la foto cubra TODA la plantilla (frontal + laterales). */
+export function minPhotoWidth(
+  imgW: number,
+  imgH: number,
+  rot: Rotation,
+  stage: { w: number; h: number },
+): number {
+  const ar = imgH / imgW;
+  if (rot % 180 === 0) return Math.max(stage.w, stage.h / ar);
+  return Math.max(stage.w / ar, stage.h);
+}
+
+/** Corrige zoom y posición para que nunca queden huecos en blanco. */
+export function clampTransform(
+  t: PhotoTransform,
+  imgW: number,
+  imgH: number,
+  stage: { w: number; h: number },
+): PhotoTransform {
+  const min = minPhotoWidth(imgW, imgH, t.rot, stage);
+  const w = Math.min(Math.max(t.w, min), min * MAX_ZOOM);
+  const ar = imgH / imgW;
+  const effW = t.rot % 180 === 0 ? w : w * ar;
+  const effH = t.rot % 180 === 0 ? w * ar : w;
+  const mx = Math.max(0, (effW - stage.w) / 2);
+  const my = Math.max(0, (effH - stage.h) / 2);
+  return {
+    w,
+    rot: t.rot,
+    cx: Math.min(mx, Math.max(-mx, t.cx)),
+    cy: Math.min(my, Math.max(-my, t.cy)),
+  };
+}
+
+export function fitTransform(imgW: number, imgH: number, stage: { w: number; h: number }): PhotoTransform {
+  return { cx: 0, cy: 0, w: minPhotoWidth(imgW, imgH, 0, stage), rot: 0 };
+}
+
+/** Amplía o reduce manteniendo fijo el punto `p` (mm desde el centro). */
+export function zoomAround(
+  t: PhotoTransform,
+  factor: number,
+  p: { x: number; y: number },
+  imgW: number,
+  imgH: number,
+  stage: { w: number; h: number },
+): PhotoTransform {
+  const min = minPhotoWidth(imgW, imgH, t.rot, stage);
+  const w2 = Math.min(Math.max(t.w * factor, min), min * MAX_ZOOM);
+  const f = w2 / t.w;
+  return clampTransform(
+    { ...t, w: w2, cx: p.x + (t.cx - p.x) * f, cy: p.y + (t.cy - p.y) * f },
+    imgW,
+    imgH,
+    stage,
+  );
+}
+
+/** Resolución real a la que se imprimiría la foto. */
+export function effectiveDpi(imgW: number, wMm: number): number {
+  return imgW / (wMm / 25.4);
+}
+
+/** Por debajo de esto se avisa al cliente de que puede salir borrosa. */
+export const LOW_DPI = 150;
+
+// ---------------------------------------------------------------------------
+// Cámara (dibujada por código, en mm desde la esquina sup. izq. de la funda)
+// ---------------------------------------------------------------------------
+export interface CameraCircle {
+  cx: number;
+  cy: number;
+  r: number;
+  kind: "lens" | "flash" | "sensor";
+}
+export interface CameraShape {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rx: number;
+  ry: number;
+  circles: CameraCircle[];
+}
+
+export function cameraShape(model: string, spec: ModelSpec): CameraShape {
+  const c = caseSizeMm(spec);
+  const [ra, rb] = parseRatio(spec.camRatio);
+  const w = (spec.camW / 100) * c.w;
+  const h = w / (ra / rb);
+  const y = ((spec.camTop ?? 3.2) / 100) * c.h;
+  const x = spec.cam === "wide" ? (c.w - w) / 2 : ((spec.camLeft ?? 5) / 100) * c.w;
+  const isPro = /pro/i.test(model);
+
+  let rx: number;
+  let ry: number;
+  const pts: Array<[number, number, number, CameraCircle["kind"]]> = []; // fx, fy, diámetro (fracción), tipo
+
+  if (spec.cam === "wide") {
+    rx = 0.16 * w;
+    ry = 0.38 * h;
+    if (/air/i.test(model)) {
+      pts.push([0.14, 0.5, 0.52, "lens"], [0.3, 0.5, 0.14, "flash"]);
+    } else {
+      pts.push(
+        [0.12, 0.28, 0.4, "lens"],
+        [0.12, 0.72, 0.4, "lens"],
+        [0.3, 0.5, 0.4, "lens"],
+        [0.88, 0.28, 0.14, "flash"],
+        [0.88, 0.72, 0.12, "sensor"],
+      );
+    }
+    // en "wide" el diámetro va en fracción del ALTO del módulo
+    return {
+      x, y, w, h, rx, ry,
+      circles: pts.map(([fx, fy, d, kind]) => ({ cx: x + fx * w, cy: y + fy * h, r: (d * h) / 2, kind })),
+    };
+  }
+
+  if (spec.cam === "vertical") {
+    rx = 0.45 * w;
+    ry = 0.24 * h;
+    pts.push([0.5, 0.27, 0.78, "lens"], [0.5, 0.73, 0.78, "lens"]);
+  } else {
+    rx = 0.24 * w;
+    ry = 0.24 * h;
+    if (isPro) {
+      pts.push(
+        [0.27, 0.27, 0.42, "lens"],
+        [0.27, 0.73, 0.42, "lens"],
+        [0.74, 0.5, 0.42, "lens"],
+        [0.74, 0.17, 0.12, "flash"],
+        [0.74, 0.83, 0.12, "sensor"],
+      );
+    } else {
+      pts.push([0.29, 0.29, 0.38, "lens"], [0.71, 0.71, 0.38, "lens"], [0.75, 0.26, 0.13, "flash"]);
+    }
+  }
+  // en el resto el diámetro va en fracción del ANCHO del módulo
+  return {
+    x, y, w, h, rx, ry,
+    circles: pts.map(([fx, fy, d, kind]) => ({ cx: x + fx * w, cy: y + fy * h, r: (d * w) / 2, kind })),
+  };
+}
+
+/** Datos del diseño que se guardan con el pedido (params de custom_designs). */
+export interface DesignParamsV2 {
+  v: 2;
+  template: TemplateId;
+  cx: number;
+  cy: number;
+  w: number;
+  rot: Rotation;
+  imgW: number;
+  imgH: number;
+  dpi: number;
+  lowQualityAccepted: boolean;
+  /** El cliente confirmó que se fabrica tal cual lo dejó (sin cambios ni devoluciones). */
+  layoutConfirmedAt: string;
+}
+
+export function isDesignV2(p: unknown): p is DesignParamsV2 {
+  return !!p && typeof p === "object" && (p as { v?: unknown }).v === 2;
+}
