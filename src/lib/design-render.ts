@@ -283,25 +283,59 @@ export function renderCasePreview(
   return canvas.toDataURL("image/png");
 }
 
-/** Reduce la foto original (si es enorme) y la pasa a JPEG para subirla. */
+/** ¿La imagen tiene zonas transparentes? (PNG sin fondo) */
+export function hasTransparency(img: HTMLImageElement): boolean {
+  const s = Math.min(1, 256 / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * s));
+  const h = Math.max(1, Math.round(img.naturalHeight * s));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return false;
+  ctx.drawImage(img, 0, 0, w, h);
+  try {
+    const data = ctx.getImageData(0, 0, w, h).data;
+    for (let i = 3; i < data.length; i += 4) if (data[i] < 250) return true;
+  } catch {
+    /* sin acceso a los píxeles */
+  }
+  return false;
+}
+
+/** Límite de tamaño de subida (el servidor acepta hasta 16 MB de texto). */
+const MAX_UPLOAD_CHARS = 15_500_000;
+
+/**
+ * Prepara la foto original para subirla: la reduce si es enorme y la pasa a JPEG.
+ * Si es un PNG sin fondo (con transparencia), se queda en PNG para no perder la transparencia.
+ */
 export function originalToJpeg(
   img: HTMLImageElement,
   maxSide = 3600,
   quality = 0.92,
-): { dataUrl: string; w: number; h: number } {
-  const s = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
-  const w = Math.round(img.naturalWidth * s);
-  const h = Math.round(img.naturalHeight * s);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Canvas no disponible");
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, w, h);
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(img, 0, 0, w, h);
-  return { dataUrl: canvas.toDataURL("image/jpeg", quality), w, h };
+): { dataUrl: string; w: number; h: number; transparent: boolean } {
+  const transparent = hasTransparency(img);
+  let side = Math.min(maxSide, Math.max(img.naturalWidth, img.naturalHeight));
+  for (;;) {
+    const s = side / Math.max(img.naturalWidth, img.naturalHeight);
+    const w = Math.round(img.naturalWidth * s);
+    const h = Math.round(img.naturalHeight * s);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas no disponible");
+    if (!transparent) {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, w, h);
+    }
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, w, h);
+    const dataUrl = transparent ? canvas.toDataURL("image/png") : canvas.toDataURL("image/jpeg", quality);
+    if (dataUrl.length <= MAX_UPLOAD_CHARS || side <= 1200) return { dataUrl, w, h, transparent };
+    side = Math.round(side * 0.82);
+  }
 }
 
 // ---- PNG con resolución de 300 ppp (para que Photoshop lo abra a tamaño real) ----

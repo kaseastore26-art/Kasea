@@ -21,6 +21,9 @@ import {
   Palette,
   LayoutGrid,
   Image as ImageIcon,
+  Printer,
+  AlignCenterVertical,
+  AlignCenterHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
@@ -34,13 +37,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { originalToJpeg, renderCasePreviewLayers } from "@/lib/design-render";
+import { originalToJpeg, renderCasePreviewLayers, renderPrintFile, renderPrintFileLayers } from "@/lib/design-render";
+import { checkIsAdmin } from "@/lib/admin.functions";
 import { uploadCustomDesign, saveCustomDesign } from "@/lib/custom-design.functions";
 import { useCartStore } from "@/lib/cart";
 import { getProductByHandlePublic } from "@/lib/catalog.functions";
 import { formatPrice } from "@/lib/shopify";
 import { seo } from "@/lib/seo";
 import {
+  TEMPLATES,
   LOW_DPI,
   MAX_PHOTOS,
   MAX_ZOOM,
@@ -106,6 +111,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 // ---------------------------------------------------------------------------
 // Margen (mm) del contorno de color alrededor del hueco de la cámara
 const CAM_PAD = 0.8;
+
+// Distancia (mm) a la que la foto se "imanta" al centro de la funda al arrastrarla
+const SNAP_MM = 1.2;
 
 function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) {
   const rawId = useId();
@@ -345,6 +353,9 @@ function PersonalizarPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [history, setHistory] = useState<Layer[][]>([]);
   const [showHint, setShowHint] = useState(false);
+  // Guías de centrado (se ven al arrastrar cuando la foto queda en el centro de la funda)
+  const [guides, setGuides] = useState({ v: false, h: false });
+  const dragRaw = useRef<{ cx: number; cy: number; sx: boolean; sy: boolean } | null>(null);
   const [acceptLow, setAcceptLow] = useState(false);
   const [confirmLayout, setConfirmLayout] = useState(false);
   const [coarse, setCoarse] = useState(false);
@@ -493,8 +504,27 @@ function PersonalizarPage() {
       const { k } = toMm(e.clientX, e.clientY);
       const dx = (e.clientX - prev.x) / k;
       const dy = (e.clientY - prev.y) / k;
-      updateSelected((l) => ({ ...l.t, cx: l.t.cx + dx, cy: l.t.cy + dy }));
+      // Posición "real" del dedo; si queda muy cerca del centro, la foto se imanta al centro
+      const ls = live.current.layers;
+      const cur = live.current.mode === "collage" ? ls.find((l) => l.id === live.current.selectedId) : ls[0];
+      if (!cur) return;
+      // Mientras está imantada se sigue el dedo "por debajo"; si no, se parte de la posición real
+      const prevRaw = dragRaw.current;
+      const raw = {
+        cx: (prevRaw?.sx ? prevRaw.cx : cur.t.cx) + dx,
+        cy: (prevRaw?.sy ? prevRaw.cy : cur.t.cy) + dy,
+        sx: false,
+        sy: false,
+      };
+      const v = Math.abs(raw.cx) < SNAP_MM;
+      const h = Math.abs(raw.cy) < SNAP_MM;
+      raw.sx = v;
+      raw.sy = h;
+      dragRaw.current = raw;
+      updateSelected((l) => ({ ...l.t, cx: v ? 0 : raw.cx, cy: h ? 0 : raw.cy }));
+      if (v !== guides.v || h !== guides.h) setGuides({ v, h });
     } else if (pointers.current.size === 2 && pinch.current) {
+      dragRaw.current = null;
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
       const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
@@ -511,6 +541,8 @@ function PersonalizarPage() {
 
   function onPointerEnd(e: React.PointerEvent<HTMLDivElement>) {
     pointers.current.delete(e.pointerId);
+    dragRaw.current = null;
+    if (guides.v || guides.h) setGuides({ v: false, h: false });
     if (pointers.current.size < 2) pinch.current = null;
   }
 
@@ -688,6 +720,15 @@ function PersonalizarPage() {
     updateSelected((l) => ({ ...l.t, rot: ((((l.t.rot + dir * 90) % 360) + 360) % 360) as Rotation }));
   }
 
+  /** Centra la foto seleccionada en la funda (a lo ancho o a lo alto). */
+  function centerSelected(axis: "x" | "y") {
+    if (!selected) return;
+    pushHistory();
+    updateSelected((l) => (axis === "x" ? { ...l.t, cx: 0 } : { ...l.t, cy: 0 }));
+    setGuides(axis === "x" ? { v: true, h: false } : { v: false, h: true });
+    setTimeout(() => setGuides({ v: false, h: false }), 900);
+  }
+
   function moveLayer(where: "front" | "back") {
     if (!selected || !multi) return;
     pushHistory();
@@ -720,6 +761,45 @@ function PersonalizarPage() {
   const dpis = layers.map((l) => effectiveDpi(l.w, l.t.w));
   const worstDpi = dpis.length ? Math.min(...dpis) : 999;
   const lowQuality = layers.length > 0 && worstDpi < LOW_DPI;
+
+  // ---- Solo administradores: descargar el archivo de impresión sin hacer pedido ----
+  const { data: adminInfo } = useQuery({
+    queryKey: ["is-admin"],
+    queryFn: () => checkIsAdmin().catch(() => ({ isAdmin: false })),
+    retry: false,
+    staleTime: 5 * 60_000,
+  });
+  const isAdmin = !!adminInfo?.isAdmin;
+  const [printing, setPrinting] = useState<string | null>(null);
+
+  async function downloadPrintNow(templateId: "grande" | "pequena") {
+    if (!layers.length) return;
+    setPrinting(templateId);
+    try {
+      const blob =
+        !multi && layers.length === 1
+          ? await renderPrintFile(layers[0].url, layers[0].t, templateId)
+          : await renderPrintFileLayers(
+              layers.map((l) => ({ url: l.url, t: l.t })),
+              templateId,
+              { cover: !multi, background },
+            );
+      const name = `kasea_${model.replace(/[^a-zA-Z0-9]+/g, "-")}_propia_${templateId}.png`;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      toast.success("Archivo listo para Photoshop");
+    } catch (e) {
+      toast.error("No se pudo generar el archivo", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setPrinting(null);
+    }
+  }
 
   // ---- Añadir a la bolsa ----
   const addItem = useCartStore((s) => s.addItem);
@@ -894,6 +974,14 @@ function PersonalizarPage() {
               ))}
 
               <CaseOverlay model={model} hasImage={hasPhotos} />
+
+              {/* Guías de centro de la funda */}
+              {guides.v && (
+                <div className="pointer-events-none absolute inset-y-0 left-1/2 w-0 -translate-x-1/2 border-l-2 border-dashed border-sky-500" />
+              )}
+              {guides.h && (
+                <div className="pointer-events-none absolute inset-x-0 top-1/2 h-0 -translate-y-1/2 border-t-2 border-dashed border-sky-500" />
+              )}
 
               {/* Marco de la foto seleccionada (solo con varias fotos) */}
               {multi &&
@@ -1174,6 +1262,12 @@ function PersonalizarPage() {
                     <button onClick={() => rotate(1)} className={btn}>
                       <RotateCw className="h-4 w-4" strokeWidth={1.5} /> Girar
                     </button>
+                    <button onClick={() => centerSelected("x")} className={btn}>
+                      <AlignCenterVertical className="h-4 w-4" strokeWidth={1.5} /> Centrar ↔
+                    </button>
+                    <button onClick={() => centerSelected("y")} className={btn}>
+                      <AlignCenterHorizontal className="h-4 w-4" strokeWidth={1.5} /> Centrar ↕
+                    </button>
                     {multi && (
                       <>
                         <button onClick={() => moveLayer("front")} className={btn}>
@@ -1271,6 +1365,36 @@ function PersonalizarPage() {
             <p className="mt-3 text-xs text-muted-foreground">
               Los colores pueden variar ligeramente respecto a tu pantalla.
             </p>
+
+            {isAdmin && (
+              <div className="mt-6 rounded-lg border-2 border-dashed border-amber-400 bg-amber-50 p-5">
+                <p className="text-sm font-medium text-amber-900">Solo para ti (administrador)</p>
+                <p className="mt-1 mb-4 text-xs text-amber-900/80">
+                  Descarga el archivo listo para Photoshop sin hacer ningún pedido. Los clientes no ven este recuadro.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {(() => {
+                    const rec = templateForModel(model);
+                    const ids: Array<"grande" | "pequena"> = rec === "grande" ? ["grande", "pequena"] : ["pequena", "grande"];
+                    return ids.map((id, i) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => downloadPrintNow(id)}
+                        disabled={!hasPhotos || printing !== null}
+                        className={`inline-flex h-10 items-center gap-2 rounded-md px-4 text-sm disabled:opacity-40 ${
+                          i === 0 ? "bg-black text-white hover:bg-neutral-800" : "border border-border bg-white hover:bg-secondary"
+                        }`}
+                      >
+                        {printing === id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
+                        {TEMPLATES[id].label}
+                        {i === 0 ? " (recomendada)" : ""}
+                      </button>
+                    ));
+                  })()}
+                </div>
+              </div>
+            )}
 
             <div className="mt-8 rounded-lg border border-border p-6">
               <p className="mb-4 text-sm text-muted-foreground">

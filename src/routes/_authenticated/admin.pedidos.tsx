@@ -7,7 +7,7 @@ import { Loader2, ChevronDown, Package, Truck, Store, AlertTriangle, Trash2, Ban
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/shopify";
-import { listOrdersAdmin, updateOrderStatus, purgeDeliveredOrders, markOrderPaid } from "@/lib/admin-catalog.functions";
+import { listOrdersAdmin, updateOrderStatus, deleteOrderAdmin, markOrderPaid } from "@/lib/admin-catalog.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/pedidos")({
   component: AdminPedidos,
@@ -35,37 +35,36 @@ function AdminPedidos() {
   const qc = useQueryClient();
   const listFn = useServerFn(listOrdersAdmin);
   const statusFn = useServerFn(updateOrderStatus);
-  const purgeFn = useServerFn(purgeDeliveredOrders);
+  const deleteFn = useServerFn(deleteOrderAdmin);
   const markPaidFn = useServerFn(markOrderPaid);
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["admin-orders"],
     queryFn: () => listFn(),
   });
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [purging, setPurging] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
-  async function purge() {
+  // Borra un pedido concreto (pensado para los pedidos de prueba)
+  async function removeOrder(o: any) {
+    const who = o.customer_name || o.email || "Cliente";
+    const total = formatPrice((o.total_cents ?? 0) / 100, o.currency || "EUR");
     if (
       !confirm(
-        "¿Borrar del historial los pedidos ENTREGADOS con más de 30 días? Esta acción no se puede deshacer.",
+        `¿Borrar el pedido de ${who} (${total}, ${fmtDate(o.created_at)})?\n\nSe elimina para siempre y no se puede deshacer.`,
       )
     )
       return;
-    setPurging(true);
+    setDeleting(o.id);
     try {
-      const { deleted } = await purgeFn();
+      await deleteFn({ data: { id: o.id } });
+      setExpanded(null);
       await qc.invalidateQueries({ queryKey: ["admin-orders"] });
-      toast.success(
-        deleted > 0
-          ? `${deleted} pedido${deleted === 1 ? "" : "s"} eliminado${deleted === 1 ? "" : "s"} del historial`
-          : "No había pedidos entregados de más de 30 días",
-      );
+      await qc.invalidateQueries({ queryKey: ["admin", "orders-print"] });
+      toast.success("Pedido borrado");
     } catch (e) {
-      toast.error("No se pudo limpiar el historial", {
-        description: e instanceof Error ? e.message : undefined,
-      });
+      toast.error("No se pudo borrar el pedido", { description: e instanceof Error ? e.message : undefined });
     } finally {
-      setPurging(false);
+      setDeleting(null);
     }
   }
 
@@ -110,15 +109,6 @@ function AdminPedidos() {
             Consulta pedidos, cambia su estado y revisa los diseños personalizados.
           </p>
         </div>
-        <Button
-          variant="outline"
-          onClick={purge}
-          disabled={purging}
-          className="gap-2 text-destructive hover:text-destructive"
-        >
-          {purging ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-          Limpiar historial
-        </Button>
       </div>
 
       {orders.length === 0 ? (
@@ -230,6 +220,27 @@ function AdminPedidos() {
                               {formatPrice((o.total_cents ?? 0) / 100, o.currency || "EUR")})
                             </Button>
                           )}
+                        </div>
+
+                        {/* Borrar este pedido (p. ej. pedidos de prueba) */}
+                        <div className="mt-6 border-t pt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeOrder(o)}
+                            disabled={deleting !== null}
+                            className="gap-2 text-destructive hover:text-destructive"
+                          >
+                            {deleting === o.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                            Borrar este pedido
+                          </Button>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            Útil para quitar pedidos de prueba. Te pedirá confirmación.
+                          </p>
                         </div>
                       </div>
 

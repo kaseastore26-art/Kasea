@@ -285,6 +285,22 @@ export const purgeDeliveredOrders = createServerFn({ method: "POST" })
     return { deleted: ((data ?? []) as any[]).length };
   });
 
+// -------- Borrar UN pedido (p. ej. pedidos de prueba) --------
+// Borra el pedido elegido y sus líneas (ON DELETE CASCADE). Igual que la limpieza,
+// usa la service role porque `orders` no tiene política RLS de DELETE.
+export const deleteOrderAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as AuthedContext;
+    await assertAdmin(ctx);
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    const { data: rows, error } = await (admin as any).from("orders").delete().eq("id", data.id).select("id");
+    if (error) throw new Error(error.message);
+    if (!rows || rows.length === 0) throw new Error("No se encontró el pedido");
+    return { ok: true };
+  });
+
 // -------- Contenido editable de la web (textos por temporada) --------
 export const getSiteContentAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
