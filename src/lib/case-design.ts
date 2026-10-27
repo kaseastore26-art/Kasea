@@ -72,35 +72,63 @@ export type ModelSpec = {
   camRatio: string; // proporción ancho / alto del módulo
   camLeft?: number; // % del ancho
   camTop?: number; // % del alto
+  /** Bulto redondo a la derecha del módulo (flash), p. ej. iPhone 16 / 16 Plus. % del ancho/alto de la funda. */
+  lobe?: { right: number; cy: number; h: number };
 };
 
 export const MODEL_SPECS: Record<string, ModelSpec> = {
-  "iPhone 18 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 90, camRatio: "2.28 / 1", camTop: 2.8 },
-  "iPhone 18 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 90, camRatio: "2.2 / 1", camTop: 2.8 },
-  "iPhone 17 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 90, camRatio: "2.28 / 1", camTop: 2.8 },
-  "iPhone 17 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 90, camRatio: "2.2 / 1", camTop: 2.8 },
+  // 17/18 Pro Max y Pro: medidos en las fundas reales de Kasea
+  // Pro Max: funda 8,2 × 16,6 cm; hueco 7,5 cm de ancho, de 0,4 a 4,4 cm desde arriba.
+  // Pro: funda ~7,7 × 15,4 cm; hueco 6,5 cm de ancho, de 0,45 a 4,45 cm desde arriba.
+  "iPhone 18 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 91.5, camRatio: "1.8 / 1", camTop: 2.4 },
+  "iPhone 18 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 84.5, camRatio: "1.56 / 1", camTop: 2.9 },
+  "iPhone 17 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 91.5, camRatio: "1.8 / 1", camTop: 2.4 },
+  "iPhone 17 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 84.5, camRatio: "1.56 / 1", camTop: 2.9 },
   "iPhone 17 Air": { ratio: "74.7 / 156.2", radius: 13, cam: "wide", camW: 88, camRatio: "2.55 / 1", camTop: 3 },
   "iPhone 17": { ratio: "71.9 / 149.6", radius: 13, cam: "vertical", camW: 28, camRatio: "0.55 / 1", camLeft: 5, camTop: 3.2 },
   "iPhone 16 Pro Max": { ratio: "77.6 / 163", radius: 12.5, cam: "square", camW: 49, camRatio: "1 / 1" },
   "iPhone 16 Pro": { ratio: "71.5 / 149.6", radius: 12.5, cam: "square", camW: 51, camRatio: "1 / 1" },
-  "iPhone 16 Plus": { ratio: "77.8 / 160.9", radius: 12.5, cam: "vertical", camW: 25, camRatio: "0.55 / 1" },
-  "iPhone 16": { ratio: "71.6 / 147.6", radius: 12.5, cam: "vertical", camW: 27, camRatio: "0.55 / 1" },
+  // 16 Plus: medido en funda real (pastilla 1,4 cm × de 0,4 a 4,7 cm; bulto del flash hasta 3,5 cm).
+  "iPhone 16 Plus": {
+    ratio: "77.8 / 160.9",
+    radius: 12.5,
+    cam: "vertical",
+    camW: 17.2,
+    camRatio: "0.318 / 1",
+    camLeft: 4.3,
+    camTop: 2.4,
+    lobe: { right: 43, cy: 15.2, h: 7.9 },
+  },
+  // 16: medido en funda real (pastilla 1,4 cm × de 0,3 a 3,9 cm; bulto del flash hasta 3,5 cm).
+  "iPhone 16": {
+    ratio: "71.6 / 147.6",
+    radius: 12.5,
+    cam: "vertical",
+    camW: 18.7,
+    camRatio: "0.38 / 1",
+    camLeft: 3.3,
+    camTop: 2,
+    lobe: { right: 46.7, cy: 13.2, h: 7.3 },
+  },
   "iPhone 15 Pro Max": { ratio: "76.7 / 159.9", radius: 12.5, cam: "square", camW: 50, camRatio: "1 / 1" },
   "iPhone 15 Pro": { ratio: "70.6 / 146.6", radius: 12.5, cam: "square", camW: 52, camRatio: "1 / 1" },
   "iPhone 15 Plus": { ratio: "77.8 / 160.9", radius: 12.5, cam: "square", camW: 38, camRatio: "1 / 1" },
   "iPhone 15": { ratio: "71.6 / 147.6", radius: 12.5, cam: "square", camW: 40, camRatio: "1 / 1" },
-  "iPhone 14 Pro Max": { ratio: "77.6 / 160.7", radius: 12, cam: "square", camW: 49, camRatio: "1 / 1" },
-  "iPhone 14 Pro": { ratio: "71.5 / 147.5", radius: 12, cam: "square", camW: 52, camRatio: "1 / 1" },
+  // 14 Pro Max: medido en funda real (8,1 × 16,4 cm; hueco 4,2 × 4,1 cm, a 0,3 cm de arriba y 0,4 cm de la izquierda).
+  "iPhone 14 Pro Max": { ratio: "77.6 / 160.7", radius: 12, cam: "square", camW: 52, camRatio: "1 / 1", camTop: 1.8, camLeft: 4.9 },
+  // 13, 13 Pro, 14 y 14 Pro comparten funda: hueco 4,1 × 3,9 cm, a 0,25 cm de arriba y 0,3 cm de la izquierda.
+  "iPhone 14 Pro": { ratio: "71.5 / 147.5", radius: 12, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
   "iPhone 14 Plus": { ratio: "78.1 / 160.8", radius: 12, cam: "square", camW: 37, camRatio: "1 / 1" },
-  "iPhone 14": { ratio: "71.5 / 146.7", radius: 12, cam: "square", camW: 39, camRatio: "1 / 1" },
+  "iPhone 14": { ratio: "71.5 / 146.7", radius: 12, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
   "iPhone 13 Pro Max": { ratio: "78.1 / 160.8", radius: 11.5, cam: "square", camW: 47, camRatio: "1 / 1" },
-  "iPhone 13 Pro": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 49, camRatio: "1 / 1" },
-  "iPhone 13": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 38, camRatio: "1 / 1" },
-  "iPhone 13 mini": { ratio: "64.2 / 131.5", radius: 11.5, cam: "square", camW: 41, camRatio: "1 / 1" },
+  "iPhone 13 Pro": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
+  "iPhone 13": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
+  // 12 mini y 13 mini comparten funda: hueco 3,3 × 3,15 cm, a 0,27 cm de arriba y 0,2 cm de la izquierda.
+  "iPhone 13 mini": { ratio: "64.2 / 131.5", radius: 11.5, cam: "square", camW: 48.5, camRatio: "1.02 / 1", camTop: 2, camLeft: 2.9 },
   "iPhone 12 Pro Max": { ratio: "78.1 / 160.8", radius: 11, cam: "square", camW: 43, camRatio: "1 / 1" },
   "iPhone 12 Pro": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 43, camRatio: "1 / 1" },
   "iPhone 12": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 36, camRatio: "1 / 1" },
-  "iPhone 12 mini": { ratio: "64.2 / 131.5", radius: 11, cam: "square", camW: 39, camRatio: "1 / 1" },
+  "iPhone 12 mini": { ratio: "64.2 / 131.5", radius: 11, cam: "square", camW: 48.5, camRatio: "1.02 / 1", camTop: 2, camLeft: 2.9 },
 };
 
 export const MODELS = Object.keys(MODEL_SPECS);
@@ -220,6 +248,8 @@ export interface CameraShape {
   rx: number;
   ry: number;
   circles: CameraCircle[];
+  /** Piezas extra del hueco (mismo color), p. ej. el bulto del flash. */
+  extras?: Array<{ x: number; y: number; w: number; h: number; r: number }>;
 }
 
 export function cameraShape(model: string, spec: ModelSpec): CameraShape {
@@ -236,18 +266,25 @@ export function cameraShape(model: string, spec: ModelSpec): CameraShape {
   const pts: Array<[number, number, number, CameraCircle["kind"]]> = []; // fx, fy, diámetro (fracción), tipo
 
   if (spec.cam === "wide") {
-    rx = 0.16 * w;
-    ry = 0.38 * h;
+    rx = Math.min(0.16 * w, 0.38 * h);
+    ry = Math.min(0.38 * h, 0.16 * w);
     if (/air/i.test(model)) {
       pts.push([0.14, 0.5, 0.52, "lens"], [0.3, 0.5, 0.14, "flash"]);
     } else {
-      pts.push(
-        [0.12, 0.28, 0.4, "lens"],
-        [0.12, 0.72, 0.4, "lens"],
-        [0.3, 0.5, 0.4, "lens"],
-        [0.88, 0.28, 0.14, "flash"],
-        [0.88, 0.72, 0.12, "sensor"],
-      );
+      // Lentes con tamaño fijo en mm (no crecen si el hueco es más alto)
+      const d = Math.min(0.4 * h, 0.17 * w, 14);
+      const pad = 0.05 * w;
+      const lx1 = x + pad + d / 2;
+      const lx2 = lx1 + d * 0.95;
+      const midY = y + h * 0.42;
+      const circles: CameraCircle[] = [
+        { cx: lx1, cy: midY - d * 0.55, r: d / 2, kind: "lens" },
+        { cx: lx1, cy: midY + d * 0.55, r: d / 2, kind: "lens" },
+        { cx: lx2, cy: midY, r: d / 2, kind: "lens" },
+        { cx: x + w - pad - d * 0.2, cy: midY - d * 0.45, r: d * 0.17, kind: "flash" },
+        { cx: x + w - pad - d * 0.2, cy: midY + d * 0.45, r: d * 0.14, kind: "sensor" },
+      ];
+      return { x, y, w, h, rx, ry, circles };
     }
     // en "wide" el diámetro va en fracción del ALTO del módulo
     return {
@@ -257,8 +294,24 @@ export function cameraShape(model: string, spec: ModelSpec): CameraShape {
   }
 
   if (spec.cam === "vertical") {
-    rx = 0.45 * w;
-    ry = 0.24 * h;
+    rx = Math.min(0.5 * w, 0.24 * h);
+    ry = rx;
+    if (spec.lobe) {
+      const lh = (spec.lobe.h / 100) * c.h;
+      const lcy = (spec.lobe.cy / 100) * c.h;
+      const lright = (spec.lobe.right / 100) * c.w;
+      const lx = x + w / 2;
+      const d = Math.min(0.85 * w, 0.4 * h);
+      return {
+        x, y, w, h, rx, ry,
+        extras: [{ x: lx, y: lcy - lh / 2, w: lright - lx, h: lh, r: lh / 2 }],
+        circles: [
+          { cx: x + w / 2, cy: y + d / 2 + w * 0.08, r: d / 2, kind: "lens" },
+          { cx: x + w / 2, cy: y + h - d / 2 - w * 0.08, r: d / 2, kind: "lens" },
+          { cx: lright - lh / 2, cy: lcy, r: lh * 0.22, kind: "flash" },
+        ],
+      };
+    }
     pts.push([0.5, 0.27, 0.78, "lens"], [0.5, 0.73, 0.78, "lens"]);
   } else {
     rx = 0.24 * w;

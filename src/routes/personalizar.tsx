@@ -104,6 +104,9 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 // ---------------------------------------------------------------------------
 // Capa SVG: zona lateral, contorno de la funda y cámara
 // ---------------------------------------------------------------------------
+// Margen (mm) del contorno de color alrededor del hueco de la cámara
+const CAM_PAD = 0.8;
+
 function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) {
   const rawId = useId();
   const maskId = `case-mask-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
@@ -113,6 +116,15 @@ function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) 
   const x0 = (stage.w - c.w) / 2;
   const y0 = (stage.h - c.h) / 2;
   const cam = cameraShape(model, spec);
+  const parts = [...(cam.extras ?? []), { x: cam.x, y: cam.y, w: cam.w, h: cam.h }];
+  const bx = Math.min(...parts.map((p) => p.x));
+  const by = Math.min(...parts.map((p) => p.y));
+  const camBox = {
+    x: bx,
+    y: by,
+    w: Math.max(...parts.map((p) => p.x + p.w)) - bx,
+    h: Math.max(...parts.map((p) => p.y + p.h)) - by,
+  };
 
   return (
     <svg
@@ -173,7 +185,28 @@ function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) 
           strokeWidth="0.45"
         />
 
+        {/* Contorno de color del hueco real de la cámara (medido en fundas reales).
+            Se dibuja debajo: las piezas de la cámara tapan las líneas interiores y solo queda el borde exterior. */}
+        {[...(cam.extras ?? []), { x: cam.x, y: cam.y, w: cam.w, h: cam.h, r: Math.min(cam.rx, cam.ry) }].map((e, i) => (
+          <rect
+            key={`hl${i}`}
+            x={e.x - CAM_PAD}
+            y={e.y - CAM_PAD}
+            width={e.w + CAM_PAD * 2}
+            height={e.h + CAM_PAD * 2}
+            rx={e.r + CAM_PAD}
+            ry={e.r + CAM_PAD}
+            fill="rgba(225,29,72,0.28)"
+            stroke="#e11d48"
+            strokeWidth="0.7"
+            strokeDasharray="1.5 0.9"
+          />
+        ))}
+
         {/* Cámara */}
+        {(cam.extras ?? []).map((e, i) => (
+          <rect key={`ex${i}`} x={e.x} y={e.y} width={e.w} height={e.h} rx={e.r} ry={e.r} fill="#1f1f22" />
+        ))}
         <rect
           x={cam.x}
           y={cam.y}
@@ -196,6 +229,19 @@ function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) 
             <circle key={i} cx={p.cx} cy={p.cy} r={p.r} fill={p.kind === "flash" ? "#efe9d8" : "#2b2b2e"} />
           ),
         )}
+        <text
+          x={camBox.x}
+          y={camBox.y + camBox.h + CAM_PAD + 3.6}
+          fontSize="3"
+          fontWeight="600"
+          fill="#e11d48"
+          stroke="white"
+          strokeWidth="0.7"
+          paintOrder="stroke"
+          style={{ fontFamily: "system-ui, sans-serif" }}
+        >
+          Hueco de la cámara · no se imprime
+        </text>
       </g>
     </svg>
   );

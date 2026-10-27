@@ -192,6 +192,11 @@ export function drawCamera(
   ctx.shadowColor = "rgba(0,0,0,0.25)";
   ctx.shadowBlur = 1.2 * k;
   ctx.shadowOffsetY = 0.4 * k;
+  for (const e of cam.extras ?? []) {
+    roundRectPath(ctx, e.x * k, e.y * k, e.w * k, e.h * k, e.r * k, e.r * k);
+    ctx.fillStyle = "#1f1f22";
+    ctx.fill();
+  }
   roundRectPath(ctx, cam.x * k, cam.y * k, cam.w * k, cam.h * k, cam.rx * k, cam.ry * k);
   const g = ctx.createLinearGradient(0, cam.y * k, 0, (cam.y + cam.h) * k);
   g.addColorStop(0, "#2a2a2d");
