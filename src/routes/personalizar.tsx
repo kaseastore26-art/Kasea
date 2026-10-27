@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useServerFn } from "@tanstack/react-start";
+import { useQuery } from "@tanstack/react-query";
 import { Slider } from "@/components/ui/slider";
 import {
   Select,
@@ -27,6 +28,7 @@ import { originalToJpeg, renderCasePreview } from "@/lib/design-render";
 import { uploadCustomDesign, saveCustomDesign } from "@/lib/custom-design.functions";
 import { useCartStore } from "@/lib/cart";
 import { getProductByHandlePublic } from "@/lib/catalog.functions";
+import { formatPrice } from "@/lib/shopify";
 import { seo } from "@/lib/seo";
 import {
   LOW_DPI,
@@ -381,6 +383,15 @@ function PersonalizarPage() {
   const fetchCustom = useServerFn(getProductByHandlePublic);
   const [adding, setAdding] = useState(false);
 
+  // Precio de la funda personalizada (se muestra desde el principio)
+  const { data: customProduct } = useQuery({
+    queryKey: ["custom-product", CUSTOM_PRODUCT_HANDLE],
+    queryFn: () => fetchCustom({ data: { handle: CUSTOM_PRODUCT_HANDLE } }),
+    staleTime: 5 * 60_000,
+  });
+  const priceInfo = customProduct?.node?.variants?.edges?.[0]?.node?.price;
+  const priceText = priceInfo ? formatPrice(priceInfo.amount, priceInfo.currencyCode) : null;
+
   async function addDesignToCart() {
     if (!image || !t) {
       toast.error("Sube una foto antes de continuar.");
@@ -475,6 +486,12 @@ function PersonalizarPage() {
       <p className="mt-4 max-w-2xl text-muted-foreground">
         Elige tu modelo de iPhone, sube una foto de tu galería y colócala como más te guste.
       </p>
+      {priceText && (
+        <div className="mt-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <p className="font-display text-3xl tabular-nums">{priceText}</p>
+          <p className="text-sm text-muted-foreground">IVA incluido · Envío gratis comprando 2 productos</p>
+        </div>
+      )}
 
       <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
         {/* ---------- Vista previa / editor ---------- */}
@@ -706,6 +723,7 @@ function PersonalizarPage() {
               ) : (
                 <>
                   <ShoppingBag className="h-5 w-5" strokeWidth={1.5} /> Añadir a la bolsa
+                  {priceText && <span className="tabular-nums"> · {priceText}</span>}
                 </>
               )}
             </button>
