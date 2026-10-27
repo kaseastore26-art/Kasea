@@ -301,3 +301,79 @@ export interface DesignParamsV2 {
 export function isDesignV2(p: unknown): p is DesignParamsV2 {
   return !!p && typeof p === "object" && (p as { v?: unknown }).v === 2;
 }
+
+// ---------------------------------------------------------------------------
+// Varias fotos (fondo blanco, colocación libre)
+// ---------------------------------------------------------------------------
+export const MAX_PHOTOS = 6;
+/** Ancho mínimo de una foto en modo libre (mm). */
+export const MIN_FREE_WIDTH = 12;
+
+/** Ancho (sin girar) para que la foto quepa dentro de una caja boxW × boxH. */
+export function fitWidthInBox(
+  imgW: number,
+  imgH: number,
+  rot: Rotation,
+  boxW: number,
+  boxH: number,
+): number {
+  const ar = imgH / imgW;
+  return rot % 180 === 0 ? Math.min(boxW, boxH / ar) : Math.min(boxW / ar, boxH);
+}
+
+/** Tamaño real que ocupa la foto en pantalla (ya girada). */
+export function effectiveBox(t: PhotoTransform, imgW: number, imgH: number): { w: number; h: number } {
+  const ar = imgH / imgW;
+  return t.rot % 180 === 0 ? { w: t.w, h: t.w * ar } : { w: t.w * ar, h: t.w };
+}
+
+/** En modo libre: tamaño entre un mínimo y un máximo y centro dentro de la plantilla. */
+export function clampFree(t: PhotoTransform, stage: { w: number; h: number }): PhotoTransform {
+  const maxW = Math.max(stage.w, stage.h) * 2;
+  return {
+    rot: t.rot,
+    w: Math.min(Math.max(t.w, MIN_FREE_WIDTH), maxW),
+    cx: Math.min(stage.w / 2, Math.max(-stage.w / 2, t.cx)),
+    cy: Math.min(stage.h / 2, Math.max(-stage.h / 2, t.cy)),
+  };
+}
+
+export function zoomFreeAround(
+  t: PhotoTransform,
+  factor: number,
+  p: { x: number; y: number },
+  stage: { w: number; h: number },
+): PhotoTransform {
+  const maxW = Math.max(stage.w, stage.h) * 2;
+  const w2 = Math.min(Math.max(t.w * factor, MIN_FREE_WIDTH), maxW);
+  const f = w2 / t.w;
+  return clampFree({ ...t, w: w2, cx: p.x + (t.cx - p.x) * f, cy: p.y + (t.cy - p.y) * f }, stage);
+}
+
+export interface DesignLayerV3 {
+  url: string;
+  cx: number;
+  cy: number;
+  w: number;
+  rot: Rotation;
+  imgW: number;
+  imgH: number;
+  dpi: number;
+}
+
+/** Diseño con una o varias fotos. Con 1 foto cubre toda la plantilla; con más, fondo blanco. */
+export interface DesignParamsV3 {
+  v: 3;
+  template: TemplateId;
+  /** "single": una foto que cubre todo; "collage": fotos libres sobre un fondo de color. */
+  mode: "single" | "collage";
+  background: string;
+  layers: DesignLayerV3[];
+  dpi: number; // la peor resolución de todas las fotos
+  lowQualityAccepted: boolean;
+  layoutConfirmedAt: string;
+}
+
+export function isDesignV3(p: unknown): p is DesignParamsV3 {
+  return !!p && typeof p === "object" && (p as { v?: unknown }).v === 3;
+}

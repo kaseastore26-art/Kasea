@@ -12,8 +12,8 @@ import { AlertTriangle, Download, ExternalLink, Loader2, Printer, Star } from "l
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { listOrdersAdmin } from "@/lib/admin-catalog.functions";
-import { renderPrintFile } from "@/lib/design-render";
-import { LOW_DPI, TEMPLATES, isDesignV2, templateForModel, type TemplateId } from "@/lib/case-design";
+import { renderPrintFile, renderPrintFileLayers } from "@/lib/design-render";
+import { LOW_DPI, TEMPLATES, isDesignV2, isDesignV3, templateForModel, type TemplateId } from "@/lib/case-design";
 
 export const Route = createFileRoute("/_authenticated/admin/imprimir")({
   component: AdminImprimir,
@@ -77,11 +77,17 @@ function AdminImprimir() {
   async function download(job: Job, templateId: TemplateId) {
     const d = job.design;
     const p = d.params;
-    if (!isDesignV2(p) || !d.image_url) return;
+    if (!(isDesignV3(p) || (isDesignV2(p) && d.image_url))) return;
     const id = `${job.key}-${templateId}`;
     setBusy(id);
     try {
-      const blob = await renderPrintFile(d.image_url, { cx: p.cx, cy: p.cy, w: p.w, rot: p.rot }, templateId);
+      const blob = isDesignV3(p)
+        ? await renderPrintFileLayers(
+            p.layers.map((l) => ({ url: l.url, t: { cx: l.cx, cy: l.cy, w: l.w, rot: l.rot } })),
+            templateId,
+            { cover: p.mode !== "collage", background: p.background },
+          )
+        : await renderPrintFile(d.image_url, { cx: p.cx, cy: p.cy, w: p.w, rot: p.rot }, templateId);
       const date = (job.order.created_at ?? "").slice(0, 10);
       const name = `kasea_${slug(d.model ?? "funda")}_${slug(job.order.customer_name ?? "")}_${date}_${templateId}.png`;
       const url = URL.createObjectURL(blob);
@@ -130,8 +136,9 @@ function AdminImprimir() {
           {visible.map((job) => {
             const d = job.design;
             const p = d.params;
-            const v2 = isDesignV2(p);
-            const recommended: TemplateId = v2 ? p.template : templateForModel(d.model ?? "");
+            const v3 = isDesignV3(p);
+            const v2 = isDesignV2(p) || v3;
+            const recommended: TemplateId = v2 ? (p as { template: TemplateId }).template : templateForModel(d.model ?? "");
             const other: TemplateId = recommended === "grande" ? "pequena" : "grande";
             const st = STATUS[job.order.status] ?? { label: job.order.status, tone: "bg-muted" };
             return (
@@ -153,10 +160,21 @@ function AdminImprimir() {
                   </p>
                   <p className="text-xs text-muted-foreground">Pedido {String(job.order.id).slice(0, 8)}</p>
 
-                  {v2 && p.dpi < LOW_DPI && (
+                  {v3 && p.mode === "collage" && (
+                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      Collage · {p.layers.length} foto{p.layers.length === 1 ? "" : "s"} · fondo
+                      <span
+                        className="inline-block h-3 w-3 rounded-full border border-border"
+                        style={{ backgroundColor: p.background }}
+                      />
+                      {p.background}
+                    </p>
+                  )}
+
+                  {v2 && (p as { dpi: number }).dpi < LOW_DPI && (
                     <p className="mt-2 flex items-start gap-1.5 text-xs text-amber-800">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                      Foto de baja calidad (~{p.dpi} ppp). El cliente aceptó el aviso.
+                      Foto de baja calidad (~{(p as { dpi: number }).dpi} ppp). El cliente aceptó el aviso.
                     </p>
                   )}
 

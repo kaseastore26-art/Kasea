@@ -5,6 +5,7 @@ import {
   caseSizeMm,
   cameraShape,
   clampTransform,
+  clampFree,
   specFor,
   templateSizeMm,
   type PhotoTransform,
@@ -374,6 +375,105 @@ export async function renderPrintFile(
   drawPhoto(ctx, bmp, fixed, PX_PER_MM, x0 + tpl.widthPx / 2, y0 + tpl.heightPx / 2);
   ctx.restore();
   bmp.close();
+
+  const blob = await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo generar el PNG"))), "image/png"),
+  );
+  const bytes = setPngDpi(new Uint8Array(await blob.arrayBuffer()), 300);
+  return new Blob([bytes], { type: "image/png" });
+}
+
+
+// ============================================================================
+// Varias fotos
+// ============================================================================
+export interface RenderLayer {
+  img: Drawable;
+  t: PhotoTransform;
+}
+
+/** Vista previa con varias fotos (fondo blanco si hay más de una). */
+export function renderCasePreviewLayers(
+  layers: RenderLayer[],
+  model: string,
+  opts: { cover: boolean; background: string },
+  widthPx = 700,
+): string {
+  if (opts.cover && layers.length === 1) return renderCasePreview(layers[0].img, layers[0].t, model, widthPx);
+  const c = caseSizeMm(specFor(model));
+  const pad = 0.04 * widthPx;
+  const k = (widthPx - pad * 2) / c.w;
+  const W = Math.round(widthPx);
+  const H = Math.round(c.h * k + pad * 2);
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas no disponible");
+  const x0 = pad;
+  const y0 = pad;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.18)";
+  ctx.shadowBlur = 3 * k;
+  ctx.shadowOffsetY = 1 * k;
+  roundRectPath(ctx, x0, y0, c.w * k, c.h * k, c.r * k, c.r * k);
+  ctx.fillStyle = opts.background || "#ffffff";
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  roundRectPath(ctx, x0, y0, c.w * k, c.h * k, c.r * k, c.r * k);
+  ctx.clip();
+  for (const l of layers) drawPhoto(ctx, l.img, l.t, k, x0 + (c.w * k) / 2, y0 + (c.h * k) / 2);
+  ctx.restore();
+
+  drawCamera(ctx, model, k, x0, y0);
+  roundRectPath(ctx, x0, y0, c.w * k, c.h * k, c.r * k, c.r * k);
+  ctx.strokeStyle = "rgba(0,0,0,0.12)";
+  ctx.lineWidth = Math.max(1, 0.35 * k);
+  ctx.stroke();
+  return canvas.toDataURL("image/png");
+}
+
+/**
+ * Archivo de impresión con una o varias fotos (hoja 15 × 24 cm, 300 ppp).
+ * Con una sola foto, la foto cubre toda la plantilla; con varias, fondo blanco.
+ */
+export async function renderPrintFileLayers(
+  layers: Array<{ url: string; t: PhotoTransform }>,
+  templateId: TemplateId,
+  opts: { cover: boolean; background: string },
+): Promise<Blob> {
+  if (opts.cover && layers.length === 1) return renderPrintFile(layers[0].url, layers[0].t, templateId);
+  const tpl = TEMPLATES[templateId];
+  const stage = templateSizeMm(templateId);
+  const bitmaps = await Promise.all(layers.map((l) => loadBitmap(l.url)));
+
+  const W = PRINT_SHEET.widthPx;
+  const H = PRINT_SHEET.heightPx;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas no disponible");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
+
+  const x0 = Math.round((W - tpl.widthPx) / 2);
+  const y0 = Math.round((H - tpl.heightPx) / 2);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x0, y0, tpl.widthPx, tpl.heightPx);
+  ctx.clip();
+  // Fondo del collage (cubre también los laterales de la plantilla)
+  ctx.fillStyle = opts.background || "#ffffff";
+  ctx.fillRect(x0, y0, tpl.widthPx, tpl.heightPx);
+  layers.forEach((l, i) =>
+    drawPhoto(ctx, bitmaps[i], clampFree(l.t, stage), PX_PER_MM, x0 + tpl.widthPx / 2, y0 + tpl.heightPx / 2),
+  );
+  ctx.restore();
+  bitmaps.forEach((b) => b.close());
 
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo generar el PNG"))), "image/png"),
