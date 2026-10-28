@@ -129,6 +129,8 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
   "iPhone 12 Pro": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 43, camRatio: "1 / 1" },
   "iPhone 12": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 36, camRatio: "1 / 1" },
   "iPhone 12 mini": { ratio: "64.2 / 131.5", radius: 11, cam: "square", camW: 48.5, camRatio: "1.02 / 1", camTop: 2, camLeft: 2.9 },
+  // 11 Pro Max: medido en funda real (8 × 16,2 cm; hueco 3,5 × 3,55 cm, a 0,2 cm de arriba y 0,25 cm de la izquierda).
+  "iPhone 11 Pro Max": { ratio: "77.8 / 158", radius: 12, cam: "square", camW: 43.8, camRatio: "0.99 / 1", camTop: 1.2, camLeft: 3.1 },
 };
 
 export const MODELS = Object.keys(MODEL_SPECS);
