@@ -84,9 +84,21 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
   "iPhone 18 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 84.5, camRatio: "1.56 / 1", camTop: 2.9 },
   "iPhone 17 Pro Max": { ratio: "77.6 / 163.4", radius: 13, cam: "wide", camW: 91.5, camRatio: "1.8 / 1", camTop: 2.4 },
   "iPhone 17 Pro": { ratio: "71.9 / 150", radius: 13, cam: "wide", camW: 84.5, camRatio: "1.56 / 1", camTop: 2.9 },
-  "iPhone 17 Air": { ratio: "74.7 / 156.2", radius: 13, cam: "wide", camW: 88, camRatio: "2.55 / 1", camTop: 3 },
-  "iPhone 17": { ratio: "71.9 / 149.6", radius: 13, cam: "vertical", camW: 28, camRatio: "0.55 / 1", camLeft: 5, camTop: 3.2 },
-  "iPhone 16 Pro Max": { ratio: "77.6 / 163", radius: 12.5, cam: "square", camW: 49, camRatio: "1 / 1" },
+  // 17 Air: medido en funda real (7,8 × 15,5 cm; hueco 6,55 × 2,4 cm centrado, de 0,45 a 2,85 cm desde arriba).
+  "iPhone 17 Air": { ratio: "74.7 / 156.2", radius: 13, cam: "wide", camW: 84, camRatio: "2.6 / 1", camTop: 2.9 },
+  // 17: medido en funda real (7,4 × 15 cm; pastilla 1,7 cm de ancho, de 0,25 a 4,05 cm desde arriba; bulto del flash hasta 3,5 cm).
+  "iPhone 17": {
+    ratio: "71.5 / 149.6",
+    radius: 13,
+    cam: "vertical",
+    camW: 23,
+    camRatio: "0.433 / 1",
+    camLeft: 5.4,
+    camTop: 1.7,
+    lobe: { right: 47.3, cy: 13.7, h: 6.7 },
+  },
+  // 16 Pro Max: medido en funda real (8 × 16,3 cm; hueco 4,25 × 4,1 cm, a 0,3 cm de arriba y 0,4 cm de la izquierda).
+  "iPhone 16 Pro Max": { ratio: "77.6 / 163", radius: 12.5, cam: "square", camW: 53, camRatio: "1 / 1", camTop: 1.85, camLeft: 4.75 },
   "iPhone 16 Pro": { ratio: "71.5 / 149.6", radius: 12.5, cam: "square", camW: 51, camRatio: "1 / 1" },
   // 16 Plus: medido en funda real (pastilla 1,4 cm × de 0,4 a 4,7 cm; bulto del flash hasta 3,5 cm).
   "iPhone 16 Plus": {
@@ -110,23 +122,30 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
     camTop: 2,
     lobe: { right: 46.7, cy: 13.2, h: 7.3 },
   },
-  "iPhone 15 Pro Max": { ratio: "76.7 / 159.9", radius: 12.5, cam: "square", camW: 50, camRatio: "1 / 1" },
-  "iPhone 15 Pro": { ratio: "70.6 / 146.6", radius: 12.5, cam: "square", camW: 52, camRatio: "1 / 1" },
-  "iPhone 15 Plus": { ratio: "77.8 / 160.9", radius: 12.5, cam: "square", camW: 38, camRatio: "1 / 1" },
-  "iPhone 15": { ratio: "71.6 / 147.6", radius: 12.5, cam: "square", camW: 40, camRatio: "1 / 1" },
+  // 15 Pro Max: medido en funda real (8 × 16 cm; hueco 3,75 × 3,8 cm, a 0,5 cm de arriba y 0,55 cm de la izquierda).
+  "iPhone 15 Pro Max": { ratio: "76.7 / 159.9", radius: 12.5, cam: "square", camW: 46.9, camRatio: "0.95 / 1", camTop: 3.1, camLeft: 6.9 },
+  // 15 Pro: medido en funda real (7,45 × 14,6 cm; hueco 3,6 × 3,8 cm, a 0,53 cm de arriba y 0,65 cm de la izquierda).
+  "iPhone 15 Pro": { ratio: "70.6 / 146.6", radius: 12.5, cam: "square", camW: 48.3, camRatio: "0.9 / 1", camTop: 3.6, camLeft: 8.7 },
+  // 15 Plus: medido en funda real (8,1 × 15,65 cm; hueco 3,25 × 3,1 cm, a 0,48 cm de arriba y 0,4 cm de la izquierda).
+  "iPhone 15 Plus": { ratio: "77.8 / 160.9", radius: 12.5, cam: "square", camW: 40.1, camRatio: "0.98 / 1", camTop: 3.1, camLeft: 5.1 },
+  // 15: medido en funda real (7,45 × 14,6 cm; hueco 2,9 × 3,05 cm, a 0,5 cm de arriba y 0,65 cm de la izquierda).
+  "iPhone 15": { ratio: "71.6 / 147.6", radius: 12.5, cam: "square", camW: 38.9, camRatio: "0.905 / 1", camTop: 3.4, camLeft: 8.7 },
   // 14 Pro Max: medido en funda real (8,1 × 16,4 cm; hueco 4,2 × 4,1 cm, a 0,3 cm de arriba y 0,4 cm de la izquierda).
   "iPhone 14 Pro Max": { ratio: "77.6 / 160.7", radius: 12, cam: "square", camW: 52, camRatio: "1 / 1", camTop: 1.8, camLeft: 4.9 },
   // 13, 13 Pro, 14 y 14 Pro comparten funda: hueco 4,1 × 3,9 cm, a 0,25 cm de arriba y 0,3 cm de la izquierda.
   "iPhone 14 Pro": { ratio: "71.5 / 147.5", radius: 12, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
-  "iPhone 14 Plus": { ratio: "78.1 / 160.8", radius: 12, cam: "square", camW: 37, camRatio: "1 / 1" },
+  // 14 Plus: medido en funda real (8,1 × 15,8 cm; hueco 3,5 × 3,42 cm, a 0,2 cm de arriba y 0,3 cm de la izquierda).
+  "iPhone 14 Plus": { ratio: "78.1 / 160.8", radius: 12, cam: "square", camW: 43.2, camRatio: "0.97 / 1", camTop: 1.33, camLeft: 3.7 },
   "iPhone 14": { ratio: "71.5 / 146.7", radius: 12, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
-  "iPhone 13 Pro Max": { ratio: "78.1 / 160.8", radius: 11.5, cam: "square", camW: 47, camRatio: "1 / 1" },
+  // 13 Pro Max: medido en funda real (8,1 × 16 cm; hueco 3,9 × 4 cm, a 0,32 cm de arriba y 0,43 cm de la izquierda).
+  "iPhone 13 Pro Max": { ratio: "78.1 / 160.8", radius: 11.5, cam: "square", camW: 47.9, camRatio: "0.93 / 1", camTop: 2, camLeft: 5.3 },
   "iPhone 13 Pro": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
   "iPhone 13": { ratio: "71.5 / 146.7", radius: 11.5, cam: "square", camW: 54.7, camRatio: "1.03 / 1", camTop: 1.7, camLeft: 3.7 },
   // 12 mini y 13 mini comparten funda: hueco 3,3 × 3,15 cm, a 0,27 cm de arriba y 0,2 cm de la izquierda.
   "iPhone 13 mini": { ratio: "64.2 / 131.5", radius: 11.5, cam: "square", camW: 48.5, camRatio: "1.02 / 1", camTop: 2, camLeft: 2.9 },
   "iPhone 12 Pro Max": { ratio: "78.1 / 160.8", radius: 11, cam: "square", camW: 43, camRatio: "1 / 1" },
-  "iPhone 12 Pro": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 43, camRatio: "1 / 1" },
+  // 12 Pro: medido en funda real (7,5 × 14,5 cm; hueco 3,5 × 3,55 cm, a 0,33 cm de arriba y 0,5 cm de la izquierda).
+  "iPhone 12 Pro": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 46.4, camRatio: "0.925 / 1", camTop: 2.3, camLeft: 6.7 },
   "iPhone 12": { ratio: "71.5 / 146.7", radius: 11, cam: "square", camW: 36, camRatio: "1 / 1" },
   "iPhone 12 mini": { ratio: "64.2 / 131.5", radius: 11, cam: "square", camW: 48.5, camRatio: "1.02 / 1", camTop: 2, camLeft: 2.9 },
   // 11 Pro Max: medido en funda real (8 × 16,2 cm; hueco 3,5 × 3,55 cm, a 0,2 cm de arriba y 0,25 cm de la izquierda).
