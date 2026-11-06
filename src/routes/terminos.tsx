@@ -96,6 +96,18 @@ function TerminosPage() {
             fundas personalizadas, al fabricarse según tus especificaciones, están excluidas del derecho
             de desistimiento. Para ejercerlo, escribe a <strong>{email}</strong>.
           </p>
+          <ul className="mt-3 list-disc space-y-1 pl-5">
+            <li>El producto debe devolverse nuevo, sin usar y en su embalaje original.</li>
+            <li>
+              La devolución se envía por correo o mensajería. Los gastos de envío de la devolución corren a
+              cargo del cliente, salvo que el producto sea defectuoso o erróneo.
+            </li>
+            <li>No se realizan cambios de diseño ni de modelo: si lo deseas, puedes devolver el producto y hacer un nuevo pedido.</li>
+            <li>
+              Te reembolsaremos el importe en un plazo máximo de 14 días desde que recibamos tu solicitud,
+              aunque podremos esperar a recibir el producto devuelto.
+            </li>
+          </ul>
         </section>
 
         <section>
