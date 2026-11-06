@@ -87,9 +87,12 @@ const BACKGROUNDS = [
 ];
 
 export const Route = createFileRoute("/personalizar")({
+  // ?modelo=iPhone 15 Pro (desde las páginas por modelo) deja ese modelo ya elegido
+  validateSearch: (search: Record<string, unknown>): { modelo?: string } =>
+    typeof search.modelo === "string" && MODELS.includes(search.modelo) ? { modelo: search.modelo } : {},
   head: () =>
     seo({
-      title: "Personaliza tu funda — Kasea Store",
+      title: "Personaliza tu funda de iPhone con tu foto | Kasea Store",
       description:
         "Diseña tu funda de iPhone con tu foto: elige tu modelo, sube tu imagen y colócala como más te guste.",
       path: "/personalizar",
@@ -342,7 +345,8 @@ function PhotoHelp() {
 // Página
 // ---------------------------------------------------------------------------
 function PersonalizarPage() {
-  const [model, setModel] = useState(MODELS[3]);
+  const { modelo: modeloInicial } = Route.useSearch();
+  const [model, setModel] = useState(modeloInicial ?? MODELS[3]);
   const templateId = templateForModel(model);
   const stage = templateSizeMm(templateId);
   const caseMm = caseSizeMm(specFor(model));

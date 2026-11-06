@@ -17,6 +17,8 @@ interface Props {
   source?: "collection" | "all";
   includeTags?: string[];
   excludeTags?: string[];
+  /** Productos ya cargados en el servidor (para que Google los vea en el HTML). */
+  initialProducts?: ShopifyProduct[] | null;
 }
 
 function ProductCard({ product, collectionHandle }: { product: ShopifyProduct; collectionHandle: string }) {
@@ -72,7 +74,7 @@ function ProductCard({ product, collectionHandle }: { product: ShopifyProduct; c
   );
 }
 
-export function CollectionPage({ collectionHandle, eyebrow, title, intro, source = "collection", includeTags, excludeTags }: Props) {
+export function CollectionPage({ collectionHandle, eyebrow, title, intro, source = "collection", includeTags, excludeTags, initialProducts }: Props) {
   const collectionFn = useServerFn(getCollectionProductsPublic);
   const allFn = useServerFn(getProductsPublic);
   const { data, isLoading } = useQuery({
@@ -87,6 +89,7 @@ export function CollectionPage({ collectionHandle, eyebrow, title, intro, source
       const res = await collectionFn({ data: { handle: collectionHandle } });
       return { products: res.products as ShopifyProduct[], missing: res.products.length === 0 };
     },
+    initialData: initialProducts ? { products: initialProducts, missing: initialProducts.length === 0 } : undefined,
   });
 
   // El orden lo define products.position (las flechas del panel), ya aplicado en

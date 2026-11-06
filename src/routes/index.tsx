@@ -43,9 +43,9 @@ const uploadedCarouselImages = [
 export const Route = createFileRoute("/")({
   head: () =>
     seo({
-      title: "Kasea Store | Fundas premium para iPhone",
+      title: "Fundas para iPhone personalizadas con tu foto | Kasea Store",
       description:
-        "Fundas premium para iPhone con diseño elegante y acabados de alta calidad. Compra online segura en España y crea tu funda personalizada.",
+        "Fundas para iPhone personalizadas con tu foto o tu diseño, y fundas con diseños exclusivos. Sublimación 3D con colores vivos, compra segura y envío gratis comprando 2 productos.",
       path: "/",
     }),
   component: HomePage,
@@ -247,11 +247,12 @@ function Hero() {
           ))}
           <div className="relative aspect-[16/10] w-full bg-[#f7f3ec]" />
           <div className="absolute inset-y-0 left-0 z-20 flex w-[46%] items-center justify-center px-3">
-            <h1 className="font-display text-[1.45rem] font-semibold leading-[1.12] tracking-[-0.01em] text-foreground text-center [text-shadow:0_1px_8px_rgba(255,255,255,0.9)] xs:text-[1.7rem] sm:text-[2.1rem]">
+            {/* Versión móvil del título: no es <h1> para que la página tenga un solo título principal */}
+            <p className="font-display text-[1.45rem] font-semibold leading-[1.12] tracking-[-0.01em] text-foreground text-center [text-shadow:0_1px_8px_rgba(255,255,255,0.9)] xs:text-[1.7rem] sm:text-[2.1rem]">
               {content.hero_title_line1}
               <br />
               <span className="italic font-normal">{content.hero_title_line2}</span>
-            </h1>
+            </p>
 
           </div>
         </div>

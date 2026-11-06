@@ -27,8 +27,10 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AccesoriosRouteImport } from './routes/accesorios'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FundasPersonalizadasIndexRouteImport } from './routes/fundas-personalizadas.index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout.index'
 import { Route as ProductHandleRouteImport } from './routes/product.$handle'
+import { Route as FundasPersonalizadasModeloRouteImport } from './routes/fundas-personalizadas.$modelo'
 import { Route as CheckoutExitoRouteImport } from './routes/checkout.exito'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe-webhook'
 import { Route as AccesoriosProtectoresRouteImport } from './routes/accesorios.protectores'
@@ -137,6 +139,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FundasPersonalizadasIndexRoute =
+  FundasPersonalizadasIndexRouteImport.update({
+    id: '/fundas-personalizadas/',
+    path: '/fundas-personalizadas/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
   id: '/checkout/',
   path: '/checkout/',
@@ -147,6 +155,12 @@ const ProductHandleRoute = ProductHandleRouteImport.update({
   path: '/product/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FundasPersonalizadasModeloRoute =
+  FundasPersonalizadasModeloRouteImport.update({
+    id: '/fundas-personalizadas/$modelo',
+    path: '/fundas-personalizadas/$modelo',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CheckoutExitoRoute = CheckoutExitoRouteImport.update({
   id: '/checkout/exito',
   path: '/checkout/exito',
@@ -273,8 +287,10 @@ export interface FileRoutesByFullPath {
   '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
+  '/fundas-personalizadas/$modelo': typeof FundasPersonalizadasModeloRoute
   '/product/$handle': typeof ProductHandleRoute
   '/checkout/': typeof CheckoutIndexRoute
+  '/fundas-personalizadas/': typeof FundasPersonalizadasIndexRoute
   '/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
   '/admin/carrusel': typeof AuthenticatedAdminCarruselRoute
   '/admin/categorias': typeof AuthenticatedAdminCategoriasRoute
@@ -311,8 +327,10 @@ export interface FileRoutesByTo {
   '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
+  '/fundas-personalizadas/$modelo': typeof FundasPersonalizadasModeloRoute
   '/product/$handle': typeof ProductHandleRoute
   '/checkout': typeof CheckoutIndexRoute
+  '/fundas-personalizadas': typeof FundasPersonalizadasIndexRoute
   '/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
   '/admin/carrusel': typeof AuthenticatedAdminCarruselRoute
   '/admin/categorias': typeof AuthenticatedAdminCategoriasRoute
@@ -352,8 +370,10 @@ export interface FileRoutesById {
   '/accesorios/protectores': typeof AccesoriosProtectoresRoute
   '/api/stripe-webhook': typeof ApiStripeWebhookRoute
   '/checkout/exito': typeof CheckoutExitoRoute
+  '/fundas-personalizadas/$modelo': typeof FundasPersonalizadasModeloRoute
   '/product/$handle': typeof ProductHandleRoute
   '/checkout/': typeof CheckoutIndexRoute
+  '/fundas-personalizadas/': typeof FundasPersonalizadasIndexRoute
   '/_authenticated/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
   '/_authenticated/admin/carrusel': typeof AuthenticatedAdminCarruselRoute
   '/_authenticated/admin/categorias': typeof AuthenticatedAdminCategoriasRoute
@@ -393,8 +413,10 @@ export interface FileRouteTypes {
     | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
+    | '/fundas-personalizadas/$modelo'
     | '/product/$handle'
     | '/checkout/'
+    | '/fundas-personalizadas/'
     | '/admin/ajustes'
     | '/admin/carrusel'
     | '/admin/categorias'
@@ -431,8 +453,10 @@ export interface FileRouteTypes {
     | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
+    | '/fundas-personalizadas/$modelo'
     | '/product/$handle'
     | '/checkout'
+    | '/fundas-personalizadas'
     | '/admin/ajustes'
     | '/admin/carrusel'
     | '/admin/categorias'
@@ -471,8 +495,10 @@ export interface FileRouteTypes {
     | '/accesorios/protectores'
     | '/api/stripe-webhook'
     | '/checkout/exito'
+    | '/fundas-personalizadas/$modelo'
     | '/product/$handle'
     | '/checkout/'
+    | '/fundas-personalizadas/'
     | '/_authenticated/admin/ajustes'
     | '/_authenticated/admin/carrusel'
     | '/_authenticated/admin/categorias'
@@ -507,8 +533,10 @@ export interface RootRouteChildren {
   TiendaRoute: typeof TiendaRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   CheckoutExitoRoute: typeof CheckoutExitoRoute
+  FundasPersonalizadasModeloRoute: typeof FundasPersonalizadasModeloRoute
   ProductHandleRoute: typeof ProductHandleRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
+  FundasPersonalizadasIndexRoute: typeof FundasPersonalizadasIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -639,6 +667,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/fundas-personalizadas/': {
+      id: '/fundas-personalizadas/'
+      path: '/fundas-personalizadas'
+      fullPath: '/fundas-personalizadas/'
+      preLoaderRoute: typeof FundasPersonalizadasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout/': {
       id: '/checkout/'
       path: '/checkout'
@@ -651,6 +686,13 @@ declare module '@tanstack/react-router' {
       path: '/product/$handle'
       fullPath: '/product/$handle'
       preLoaderRoute: typeof ProductHandleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/fundas-personalizadas/$modelo': {
+      id: '/fundas-personalizadas/$modelo'
+      path: '/fundas-personalizadas/$modelo'
+      fullPath: '/fundas-personalizadas/$modelo'
+      preLoaderRoute: typeof FundasPersonalizadasModeloRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checkout/exito': {
@@ -863,8 +905,10 @@ const rootRouteChildren: RootRouteChildren = {
   TiendaRoute: TiendaRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   CheckoutExitoRoute: CheckoutExitoRoute,
+  FundasPersonalizadasModeloRoute: FundasPersonalizadasModeloRoute,
   ProductHandleRoute: ProductHandleRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,
+  FundasPersonalizadasIndexRoute: FundasPersonalizadasIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

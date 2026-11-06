@@ -12,7 +12,7 @@ const MAX_BEST_SELLING = 20;
 export const Route = createFileRoute("/mas-vendido")({
   head: () =>
     seo({
-      title: "Lo más vendido — Kasea Store",
+      title: "Fundas para iPhone más vendidas | Kasea Store",
       description:
         "Descubre las fundas más vendidas de Kasea Store: los diseños favoritos de nuestros clientes para iPhone.",
       path: "/mas-vendido",

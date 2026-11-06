@@ -9,11 +9,19 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import { seo } from "@/lib/seo";
 
 export const Route = createFileRoute("/tienda")({
+  // Los productos se cargan ya en el servidor: así Google los ve en el HTML.
+  loader: async () => {
+    try {
+      return { products: (await getProductsPublic()) as ShopifyProduct[] };
+    } catch {
+      return { products: null };
+    }
+  },
   validateSearch: (search: Record<string, unknown>): { q?: string } =>
     typeof search.q === "string" && search.q ? { q: search.q } : {},
   head: () =>
     seo({
-      title: "Tienda — Fundas premium para iPhone | Kasea Store",
+      title: "Tienda online de fundas para iPhone y accesorios | Kasea Store",
       description:
         "Explora toda la colección Kasea: fundas premium para iPhone diseñadas con materiales seleccionados. Envío a España.",
       path: "/tienda",
@@ -57,6 +65,7 @@ function ShopPage() {
   const { data: ordered = [], isLoading } = useQuery({
     queryKey: ["products", "shop"],
     queryFn: async () => (await productsFn()) as ShopifyProduct[],
+    initialData: Route.useLoaderData().products ?? undefined,
   });
   const { q } = Route.useSearch();
   const products = q

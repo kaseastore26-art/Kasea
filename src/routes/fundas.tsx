@@ -25,9 +25,9 @@ const CATEGORIES: Array<{
 export const Route = createFileRoute("/fundas")({
   head: () =>
     seo({
-      title: "Fundas para iPhone — Kasea Store",
+      title: "Fundas para iPhone: diseños exclusivos y personalizadas | Kasea Store",
       description:
-        "Descubre las fundas Kasea para iPhone: diseño premium, protección y la opción de personalizar la tuya.",
+        "Fundas para iPhone de Kasea: elige entre nuestros diseños exclusivos o crea tu funda personalizada con tu foto. Sublimación 3D y envío a toda España.",
       path: "/fundas",
     }),
   component: FundasCategoriesPage,

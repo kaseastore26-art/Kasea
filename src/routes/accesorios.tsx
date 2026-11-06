@@ -73,7 +73,7 @@ function ProductCard({ product }: { product: ShopifyProduct }) {
 export const Route = createFileRoute("/accesorios")({
   head: () =>
     seo({
-      title: "Accesorios para móvil — Kasea Store",
+      title: "Accesorios para iPhone y móvil: cuerdas, protectores y cargadores | Kasea Store",
       description:
         "Descubre cuerdas para el móvil, protectores, cargadores y otros accesorios para tu móvil. Accesorios Kasea que combinan diseño, utilidad y estilo.",
       path: "/accesorios",

@@ -6,7 +6,9 @@ const COLS = [
     title: "Tienda",
     links: [
       { to: "/tienda", label: "Todos los productos" },
-      
+      { to: "/fundas-sublimacion", label: "Fundas para iPhone" },
+      { to: "/fundas-personalizadas", label: "Fundas personalizadas por modelo" },
+      { to: "/accesorios", label: "Accesorios" },
     ],
   },
   {

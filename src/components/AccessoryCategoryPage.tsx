@@ -78,12 +78,20 @@ function ProductCard({ product }: { product: ShopifyProduct }) {
   );
 }
 
-export function AccessoryCategoryPage({ category }: { category: Category }) {
+export function AccessoryCategoryPage({
+  category,
+  initialProducts,
+}: {
+  category: Category;
+  /** Productos ya cargados en el servidor (para que Google los vea en el HTML). */
+  initialProducts?: ShopifyProduct[] | null;
+}) {
   const accessoriesFn = useServerFn(getAccessoriesProductsPublic);
 
   const { data, isLoading } = useQuery({
     queryKey: ["products", "accesorios", category],
     queryFn: async () => accessoriesFn(),
+    initialData: initialProducts ?? undefined,
   });
 
   const products = (data ?? []).filter((product) =>
