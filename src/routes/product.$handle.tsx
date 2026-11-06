@@ -14,6 +14,9 @@ import { FavoriteButton } from "@/components/FavoriteButton";
 import { SITE_URL } from "@/lib/seo";
 
 
+// Etiquetas de accesorios: lo que no las lleva es una funda.
+const ACCESSORY_TAGS = ["accesorios", "colgantes", "protectores", "cargadores", "otros"];
+
 async function fetchProduct(handle: string): Promise<ShopifyProduct | null> {
   return await getProductByHandlePublic({ data: { handle } });
 }
@@ -33,14 +36,28 @@ export const Route = createFileRoute("/product/$handle")({
       return { meta: [{ title: "Producto no encontrado — Kasea" }, { name: "robots", content: "noindex" }] };
     }
     const p = loaderData.product.node;
-    
     const img = p.images.edges[0]?.node?.url;
+    // Las fundas (todo lo que no es accesorio) se presentan a Google como
+    // "Nombre · Funda para iPhone", que es lo que la gente busca.
+    const isCase = !(p.tags ?? []).some((t) => ACCESSORY_TAGS.includes(t));
+    const pageTitle = isCase ? `${p.title} · Funda para iPhone | Kasea Store` : `${p.title} | Kasea Store`;
+    // Primero la descripción del producto (lo que hace única a cada funda) y
+    // después, si cabe, la frase de los modelos.
+    const desc = (p.description ?? "").trim();
+    const tail = isCase ? "Elige tu modelo, del iPhone 11 al 17 Pro Max." : "Compra online en Kasea Store.";
+    const metaDescription = (
+      desc
+        ? `${desc} ${tail}`
+        : isCase
+          ? `${p.title}: funda para iPhone con diseño exclusivo de Kasea. ${tail}`
+          : `${p.title} en Kasea Store. ${tail}`
+    ).slice(0, 160);
     return {
       meta: [
-        { title: `${p.title} — Kasea Store` },
-        { name: "description", content: p.description?.slice(0, 155) || `Descubre ${p.title} en Kasea Store.` },
-        { property: "og:title", content: `${p.title} — Kasea Store` },
-        { property: "og:description", content: p.description?.slice(0, 155) || "" },
+        { title: pageTitle },
+        { name: "description", content: metaDescription },
+        { property: "og:title", content: pageTitle },
+        { property: "og:description", content: metaDescription },
         { property: "og:type", content: "product" },
         { property: "og:url", content: `${SITE_URL}/product/${params.handle}` },
         { name: "robots", content: "index, follow" },
