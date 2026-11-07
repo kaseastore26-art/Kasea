@@ -56,7 +56,8 @@ export function splitMultiCaseDiscount(lines: PromoLine[]): Array<{ fullQty: num
     if (fullIndex === -1 || l.unitCents > lines[fullIndex].unitCents) fullIndex = i;
   });
   return lines.map((l, i) => {
-    if (!l.isCase) return { fullQty: l.quantity, discountedQty: 0 };
+    // Promo apagada (0 %) o no es funda: todo a precio completo.
+    if (!l.isCase || !MULTI_CASE_PROMO_ON) return { fullQty: l.quantity, discountedQty: 0 };
     const fullQty = i === fullIndex ? 1 : 0;
     return { fullQty, discountedQty: Math.max(0, l.quantity - fullQty) };
   });
