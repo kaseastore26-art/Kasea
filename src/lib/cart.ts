@@ -13,6 +13,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { ShopifyProduct } from "./shopify";
+import { applyPercentDiscount, isCaseProduct, promoTotals } from "./pricing";
 
 export interface CartAttribute {
   key: string;
@@ -109,3 +110,42 @@ export const useCartStore = create<CartStore>()(
     },
   ),
 );
+
+// ---------------------------------------------------------------------------
+// Totales del carrito con la promoción de fundas (2.ª funda y siguientes −25 %)
+// y, si lo hay, el código de descuento. Mismas reglas que el servidor.
+// ---------------------------------------------------------------------------
+export function isCaseItem(item: CartItem): boolean {
+  return isCaseProduct(item.product?.node?.tags, { custom: !!item.customDesignId });
+}
+
+export interface CartTotals {
+  /** Suma a precio normal. */
+  subtotalCents: number;
+  /** Ahorro por el código de descuento. */
+  codeDiscountCents: number;
+  /** Ahorro por la promoción de la 2.ª funda. */
+  promoCents: number;
+  /** Total de productos (sin envío). */
+  totalCents: number;
+  /** Número de fundas en el carrito. */
+  caseCount: number;
+}
+
+export function cartTotals(items: CartItem[], codePercent = 0): CartTotals {
+  const toCents = (amount: string) => Math.round(parseFloat(amount) * 100);
+  const subtotalCents = items.reduce((sum, i) => sum + toCents(i.price.amount) * i.quantity, 0);
+  const lines = items.map((i) => ({
+    unitCents: applyPercentDiscount(toCents(i.price.amount), codePercent),
+    quantity: i.quantity,
+    isCase: isCaseItem(i),
+  }));
+  const promo = promoTotals(lines);
+  return {
+    subtotalCents,
+    codeDiscountCents: subtotalCents - promo.originalCents,
+    promoCents: promo.promoCents,
+    totalCents: promo.totalCents,
+    caseCount: promo.caseCount,
+  };
+}

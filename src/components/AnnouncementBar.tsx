@@ -2,7 +2,7 @@ import { useSiteContent } from "@/hooks/useSiteContent";
 
 export function AnnouncementBar() {
   const content = useSiteContent();
-  const message = content.announcement_text || "Envío gratuito en pedidos superiores a 55€";
+  const message = content.announcement_text || "Envío gratis en todas las fundas";
   // Repetimos el mensaje para que la cinta (marquee) no deje huecos.
   const loop = [message, message, message];
   return (

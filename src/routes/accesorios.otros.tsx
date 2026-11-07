@@ -8,7 +8,7 @@ export const Route = createFileRoute("/accesorios/otros")({
   head: () =>
     seo({
       title: "Otros accesorios para iPhone y móvil | Kasea Store",
-      description: "Otros accesorios útiles para tu iPhone y tu móvil. Compra online en Kasea Store con envío a toda España y envío gratis comprando 2 productos.",
+      description: "Otros accesorios útiles para tu iPhone y tu móvil. Compra online en Kasea Store con envío a toda España y envío gratis si lo combinas con una funda.",
       path: "/accesorios/otros",
     }),
   // Los productos se cargan ya en el servidor: así Google los ve en el HTML.

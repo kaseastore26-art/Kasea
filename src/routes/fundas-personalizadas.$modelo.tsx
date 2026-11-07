@@ -49,7 +49,7 @@ export const Route = createFileRoute("/fundas-personalizadas/$modelo")({
     const path = `/fundas-personalizadas/${modelSlug(model)}`;
     const base = seo({
       title: `Fundas ${model}: personalizada con tu foto o con diseño exclusivo | Kasea Store`,
-      description: `Fundas para ${model}: créala con tu foto o un collage, o elige uno de nuestros diseños exclusivos. Impresión por sublimación 3D que cubre la trasera y los laterales. Envío gratis comprando 2 productos.`,
+      description: `Fundas para ${model}: créala con tu foto o un collage, o elige uno de nuestros diseños exclusivos. Sublimación 3D que cubre la trasera y los laterales. Envío gratis.`,
       path,
     });
     const jsonLd: Record<string, unknown>[] = [
@@ -144,7 +144,7 @@ function ModelPage() {
           {priceText && (
             <p className="mt-6 flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="font-display text-3xl tabular-nums">{priceText}</span>
-              <span className="text-sm text-muted-foreground">IVA incluido · Envío gratis comprando 2 productos</span>
+              <span className="text-sm text-muted-foreground">IVA incluido · Envío gratis</span>
             </p>
           )}
           <Link

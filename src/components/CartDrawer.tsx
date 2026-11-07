@@ -3,7 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ShoppingBag, Minus, Plus, Trash2 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useCartStore } from "@/lib/cart";
+import { cartTotals, useCartStore } from "@/lib/cart";
+import { MULTI_CASE_DISCOUNT_PERCENT, MULTI_CASE_PROMO_ON } from "@/lib/pricing";
 import { formatPrice } from "@/lib/shopify";
 
 export function CartDrawer() {
@@ -13,7 +14,9 @@ export function CartDrawer() {
   const totalItems = items.reduce((s, i) => s + i.quantity, 0);
   const currency = items[0]?.price.currencyCode ?? "EUR";
   // Subtotal calculado con las líneas locales: sube/baja al instante.
-  const subtotal = items.reduce((s, i) => s + parseFloat(i.price.amount) * i.quantity, 0);
+  const totals = cartTotals(items);
+  const subtotal = totals.subtotalCents / 100;
+  const total = totals.totalCents / 100;
 
   const handleCheckout = () => {
     setOpen(false);
@@ -114,15 +117,30 @@ export function CartDrawer() {
                 </div>
               </div>
               <div className="flex-shrink-0 space-y-3 px-6 py-5 border-t bg-ivory">
+                {MULTI_CASE_PROMO_ON && totals.caseCount === 1 && (
+                  <p className="rounded-md border border-gold/50 bg-secondary/40 px-3 py-2 text-xs text-espresso">
+                    ✦ Añade otra funda y llévatela con un <strong>{MULTI_CASE_DISCOUNT_PERCENT} % de descuento</strong>.
+                  </p>
+                )}
                 <div className="flex justify-between items-baseline text-sm">
                   <span className="text-muted-foreground">Subtotal</span>
                   <span className="tabular-nums">{formatPrice(subtotal, currency)}</span>
                 </div>
+                {totals.promoCents > 0 && (
+                  <div className="flex justify-between items-baseline text-sm text-espresso">
+                    <span>2.ª funda y siguientes (−{MULTI_CASE_DISCOUNT_PERCENT} %)</span>
+                    <span className="tabular-nums">−{formatPrice(totals.promoCents / 100, currency)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-baseline pt-2 border-t">
                   <span className="text-sm eyebrow">Total</span>
-                  <span className="text-xl font-display tabular-nums">{formatPrice(subtotal, currency)}</span>
+                  <span className="text-xl font-display tabular-nums">{formatPrice(total, currency)}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Envío calculado en el checkout.</p>
+                <p className="text-xs text-muted-foreground">
+                  {totals.caseCount > 0
+                    ? "Envío gratis: tu pedido lleva una funda."
+                    : "Añade una funda y el envío es gratis."}
+                </p>
                 <Button onClick={handleCheckout} className="w-full h-12 rounded-none bg-espresso text-ivory hover:bg-espresso/90 tracking-wide">
                   Finalizar compra
                 </Button>

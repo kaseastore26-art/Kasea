@@ -8,7 +8,7 @@ export const Route = createFileRoute("/accesorios/colgantes")({
   head: () =>
     seo({
       title: "Cuerdas y colgantes para el móvil | Kasea Store",
-      description: "Cuerdas y colgantes para llevar el móvil cómodo y con estilo. Combínalos con tu funda Kasea. Envío gratis comprando 2 productos.",
+      description: "Cuerdas y colgantes para llevar el móvil cómodo y con estilo. Combínalos con tu funda Kasea y el envío es gratis.",
       path: "/accesorios/colgantes",
     }),
   // Los productos se cargan ya en el servidor: así Google los ve en el HTML.

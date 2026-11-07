@@ -8,7 +8,7 @@ export const Route = createFileRoute("/accesorios/cargadores")({
   head: () =>
     seo({
       title: "Cargadores para iPhone y móvil | Kasea Store",
-      description: "Cargadores para iPhone y móvil para el día a día. Compra online en Kasea Store con envío a toda España y envío gratis comprando 2 productos.",
+      description: "Cargadores para iPhone y móvil para el día a día. Compra online en Kasea Store con envío a toda España y envío gratis si lo combinas con una funda.",
       path: "/accesorios/cargadores",
     }),
   // Los productos se cargan ya en el servidor: así Google los ve en el HTML.

@@ -306,6 +306,11 @@ if (typeof fbq === "function") {
           <p className="mt-4 text-2xl font-display">
             {variant && formatPrice(variant.price.amount, variant.price.currencyCode)}
           </p>
+          <p className="mt-2 text-xs uppercase tracking-[0.18em] text-gold">
+            {(p.tags ?? []).some((t) => ACCESSORY_TAGS.includes(t))
+              ? "Envío gratis si lo añades con una funda"
+              : "Envío gratis"}
+          </p>
 
           {p.description && (
             <p className="mt-6 text-muted-foreground leading-relaxed">{p.description}</p>

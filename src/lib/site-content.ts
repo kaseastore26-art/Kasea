@@ -11,7 +11,7 @@
 export type SiteContent = Record<string, string>;
 
 export const SITE_CONTENT_DEFAULTS: SiteContent = {
-  announcement_text: "Envío gratuito en pedidos superiores a 55€",
+  announcement_text: "Envío gratis en todas las fundas",
   hero_title_line1: "TU MOVIL MERECE",
   hero_title_line2: "una funda única",
   hero_intro:

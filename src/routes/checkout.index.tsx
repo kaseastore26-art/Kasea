@@ -6,7 +6,7 @@ import { ShoppingBag, ArrowLeft, Truck, Lock, Loader2, Store, CreditCard, Bankno
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCartStore } from "@/lib/cart";
+import { cartTotals, useCartStore } from "@/lib/cart";
 import { formatPrice } from "@/lib/shopify";
 import { createCheckoutSession, createCashPickupOrder } from "@/lib/checkout.functions";
 import { getShopSettingsPublic } from "@/lib/catalog.functions";
@@ -15,10 +15,10 @@ import {
   BALEARES_SHIPPING_CENTS,
   DEFAULT_SHIPPING_SETTINGS,
   FREE_SHIPPING_IN_BALEARES,
-  FREE_SHIPPING_MIN_ITEMS,
   HOME_DELIVERY_LABEL,
+  MULTI_CASE_DISCOUNT_PERCENT,
+  MULTI_CASE_PROMO_ON,
   NACEX_POINT_ENABLED,
-  applyPercentDiscount,
   computeShippingCents,
   isBalearesPostalCode,
   qualifiesForFreeShipping,
@@ -249,17 +249,14 @@ function CheckoutPage() {
   const currency = items[0]?.price.currencyCode ?? "EUR";
 
   // Importes en céntimos (mismas reglas que usa el servidor al cobrar).
-  const toCents = (amount: string) => Math.round(parseFloat(amount) * 100);
-  const itemCount = items.reduce((n, i) => n + i.quantity, 0);
-  const subtotalCents = items.reduce((sum, i) => sum + toCents(i.price.amount) * i.quantity, 0);
-  const discountedSubtotalCents = items.reduce(
-    (sum, i) => sum + applyPercentDiscount(toCents(i.price.amount), discount?.percent ?? 0) * i.quantity,
-    0,
-  );
-  const discountCents = subtotalCents - discountedSubtotalCents;
+  // Promoción: con una funda el envío es gratis y, desde la 2.ª, cada funda −25 %.
+  const totals = cartTotals(items, discount?.percent ?? 0);
+  const { subtotalCents, promoCents, caseCount } = totals;
+  const discountCents = totals.codeDiscountCents;
+  const discountedSubtotalCents = totals.totalCents;
   const shippingCents = computeShippingCents(
     delivery,
-    { postalCode: shippingPostalCode, subtotalCents: discountedSubtotalCents, itemCount },
+    { postalCode: shippingPostalCode, subtotalCents: discountedSubtotalCents, caseCount },
     settings,
   );
   const totalCents = discountedSubtotalCents + shippingCents;
@@ -269,18 +266,19 @@ function CheckoutPage() {
   const total = totalCents / 100;
 
   const baleares = isBalearesPostalCode(shippingPostalCode);
-  const freeShipping = qualifiesForFreeShipping(itemCount, discountedSubtotalCents, settings);
+  const freeShipping = qualifiesForFreeShipping(caseCount, discountedSubtotalCents, settings);
   const homePriceText = baleares
     ? freeShipping && FREE_SHIPPING_IN_BALEARES
       ? "Gratis"
       : `${formatPrice(BALEARES_SHIPPING_CENTS / 100, currency)} · Islas Baleares`
     : freeShipping
-      ? "Gratis · tienes envío gratis"
-      : `${formatPrice(settings.flatCents / 100, currency)} · Gratis comprando ${FREE_SHIPPING_MIN_ITEMS} productos o más`;
+      ? "Gratis · tu pedido lleva una funda"
+      : `${formatPrice(settings.flatCents / 100, currency)} · Gratis si tu pedido lleva una funda`;
 
-  // Aviso "añade otro producto y el envío es gratis"
-  const showFreeShippingNudge =
-    delivery === "delivery" && itemCount < FREE_SHIPPING_MIN_ITEMS && shippingCents > 0 && !baleares;
+  // Avisos: sin funda → "añade una funda y el envío es gratis";
+  //         con 1 funda → "la 2.ª funda con −25 %".
+  const showFreeShippingNudge = delivery === "delivery" && caseCount === 0 && shippingCents > 0 && !baleares;
+  const showSecondCaseNudge = MULTI_CASE_PROMO_ON && caseCount === 1;
 
   if (items.length === 0) {
     return (
@@ -320,16 +318,34 @@ function CheckoutPage() {
             <div className="mb-5 flex items-start gap-3 rounded-lg border border-espresso/20 bg-secondary/40 p-4">
               <Gift className="mt-0.5 h-5 w-5 flex-shrink-0 text-espresso" strokeWidth={1.5} />
               <div className="flex-1 text-sm">
-                <p className="font-medium text-espresso">Con la compra de tu segundo producto, el envío es gratis</p>
+                <p className="font-medium text-espresso">Añade una funda y el envío es gratis</p>
                 <p className="mt-0.5 text-muted-foreground">
-                  Añade una funda, una cuerda o un protector y te ahorras{" "}
-                  {formatPrice(shipping, currency)} de envío.
+                  Con cualquier funda en tu pedido te ahorras {formatPrice(shipping, currency)} de envío.
                 </p>
                 <Link
-                  to="/tienda"
+                  to="/fundas-sublimacion"
                   className="mt-2 inline-block text-xs font-medium uppercase tracking-[0.14em] text-espresso underline underline-offset-4"
                 >
-                  Añadir otro producto
+                  Ver fundas
+                </Link>
+              </div>
+            </div>
+          )}
+          {showSecondCaseNudge && (
+            <div className="mb-5 flex items-start gap-3 rounded-lg border border-gold/50 bg-secondary/40 p-4">
+              <Gift className="mt-0.5 h-5 w-5 flex-shrink-0 text-gold" strokeWidth={1.5} />
+              <div className="flex-1 text-sm">
+                <p className="font-medium text-espresso">
+                  Tu segunda funda, con un {MULTI_CASE_DISCOUNT_PERCENT} % de descuento
+                </p>
+                <p className="mt-0.5 text-muted-foreground">
+                  Añade otra funda y se aplicará el descuento automáticamente.
+                </p>
+                <Link
+                  to="/fundas-sublimacion"
+                  className="mt-2 inline-block text-xs font-medium uppercase tracking-[0.14em] text-espresso underline underline-offset-4"
+                >
+                  Elegir otra funda
                 </Link>
               </div>
             </div>
@@ -746,6 +762,12 @@ function CheckoutPage() {
                 <div className="flex items-baseline justify-between text-espresso">
                   <span>Descuento ({discount.percent} %)</span>
                   <span className="tabular-nums">−{formatPrice(discountCents / 100, currency)}</span>
+                </div>
+              )}
+              {promoCents > 0 && (
+                <div className="flex items-baseline justify-between text-espresso">
+                  <span>2.ª funda y siguientes (−{MULTI_CASE_DISCOUNT_PERCENT} %)</span>
+                  <span className="tabular-nums">−{formatPrice(promoCents / 100, currency)}</span>
                 </div>
               )}
               <div className="flex items-baseline justify-between">

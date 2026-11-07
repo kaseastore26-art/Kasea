@@ -21,11 +21,19 @@ import {
   DEFAULT_SHIPPING_SETTINGS,
   HOME_DELIVERY_LABEL,
   NACEX_POINT_ENABLED,
+  MULTI_CASE_DISCOUNT_PERCENT,
   applyPercentDiscount,
   computeShippingCents,
   discountNoteText,
+  isCaseProduct,
+  splitMultiCaseDiscount,
   type ShippingSettings,
 } from "@/lib/pricing";
+
+/** Texto de la promoción que aparece en el pago y en el pedido. */
+const PROMO_LABEL = `Promoción 2.ª funda y siguientes (−${MULTI_CASE_DISCOUNT_PERCENT} %)`;
+/** Coletilla del nombre de las fundas con la promoción (se ve en el pedido y los correos). */
+const PROMO_SUFFIX = ` · 2.ª funda −${MULTI_CASE_DISCOUNT_PERCENT} %`;
 
 function publicClient() {
   return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
@@ -121,7 +129,9 @@ type VariantRow = {
     handle: string;
     title: string;
     status: string;
-    product_images: Array<{ url: string; position: number }>;
+    tags?: string[] | null;
+    is_custom?: boolean | null;
+    product_images?: Array<{ url: string; position: number }>;
   } | null;
 };
 
@@ -187,16 +197,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     const ids = [...new Set(data.items.map((i) => i.variantId))];
     const { data: rows, error } = await supabase
       .from("product_variants")
-      .select("id, price_cents, currency, stock, title, products!inner ( handle, title, status, product_images ( url, position ) )")
+      .select("id, price_cents, currency, stock, title, products!inner ( handle, title, status, tags, is_custom, product_images ( url, position ) )")
       .in("id", ids);
     if (error) return { error: `No se pudo validar el carrito: ${error.message}` };
 
     const byId = new Map((rows as unknown as VariantRow[]).map((r) => [r.id, r]));
 
-    const lineItems: unknown[] = [];
-    let subtotal = 0; // ya con el descuento aplicado
-    let originalSubtotal = 0;
-    let itemCount = 0;
+    // Primero se validan todas las líneas; después se aplica la promoción de
+    // fundas (la más cara a precio completo, el resto con −25 %).
+    type Line = { item: (typeof data.items)[number]; v: VariantRow; unitCents: number; isCase: boolean };
+    const lines: Line[] = [];
     for (const item of data.items) {
       const v = byId.get(item.variantId);
       if (!v || !v.products || v.products.status !== "active") {
@@ -207,14 +217,34 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           error: `Sin stock suficiente de "${v.products.title}" (quedan ${v.stock}).`,
         };
       }
-      const unitCents = applyPercentDiscount(v.price_cents, percent);
-      subtotal += unitCents * item.quantity;
-      originalSubtotal += v.price_cents * item.quantity;
-      itemCount += item.quantity;
+      lines.push({
+        item,
+        v,
+        unitCents: applyPercentDiscount(v.price_cents, percent),
+        isCase: isCaseProduct(v.products.tags, { custom: !!v.products.is_custom || !!item.customDesignId }),
+      });
+    }
+    const split = splitMultiCaseDiscount(
+      lines.map((l) => ({ unitCents: l.unitCents, quantity: l.item.quantity, isCase: l.isCase })),
+    );
 
-      const img = [...(v.products.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url;
+    const lineItems: unknown[] = [];
+    let subtotal = 0; // ya con el código y la promoción aplicados
+    let originalSubtotal = 0;
+    let codeSubtotal = 0; // solo con el código de descuento
+    let caseCount = 0;
+    lines.forEach(({ item, v, unitCents, isCase }, idx) => {
+      const products = v.products!;
+      const promoUnit = applyPercentDiscount(unitCents, MULTI_CASE_DISCOUNT_PERCENT);
+      const { fullQty, discountedQty } = split[idx];
+      subtotal += unitCents * fullQty + promoUnit * discountedQty;
+      codeSubtotal += unitCents * item.quantity;
+      originalSubtotal += v.price_cents * item.quantity;
+      if (isCase) caseCount += item.quantity;
+
+      const img = [...(products.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url;
       const isDefault = !v.title || v.title === "Default Title";
-      const name = isDefault ? v.products.title : `${v.products.title} — ${v.title}`;
+      const name = isDefault ? products.title : `${products.title} — ${v.title}`;
 
       // Atributos legibles (marca/modelo/diseño) para mostrar y para el pedido.
       const attrs = item.attributes ?? [];
@@ -223,32 +253,37 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         .map((a) => `${a.key}: ${a.value}`)
         .join(" · ");
       const discountText = discount ? `Descuento ${discount.code} (−${percent} %)` : "";
-      const description = [attrText, discountText].filter(Boolean).join(" · ");
-
-      lineItems.push({
-        quantity: item.quantity,
-        price_data: {
-          currency: (v.currency || "eur").toLowerCase(),
-          unit_amount: unitCents,
-          product_data: {
-            name,
-            ...(description ? { description } : {}),
-            ...(img ? { images: [img] } : {}),
-            metadata: {
-              variant_id: v.id,
-              ...(item.customDesignId ? { custom_design_id: item.customDesignId } : {}),
-              ...(attrs.length ? { attrs: JSON.stringify(attrs).slice(0, 480) } : {}),
+      const metadata = {
+        variant_id: v.id,
+        ...(item.customDesignId ? { custom_design_id: item.customDesignId } : {}),
+        ...(attrs.length ? { attrs: JSON.stringify(attrs).slice(0, 480) } : {}),
+      };
+      const pushLine = (quantity: number, unit: number, promo: boolean) => {
+        if (quantity <= 0) return;
+        const description = [attrText, discountText, promo ? PROMO_LABEL : ""].filter(Boolean).join(" · ");
+        lineItems.push({
+          quantity,
+          price_data: {
+            currency: (v.currency || "eur").toLowerCase(),
+            unit_amount: unit,
+            product_data: {
+              name: promo ? `${name}${PROMO_SUFFIX}` : name,
+              ...(description ? { description } : {}),
+              ...(img ? { images: [img] } : {}),
+              metadata,
             },
           },
-        },
-      });
-    }
+        });
+      };
+      pushLine(fullQty, unitCents, false);
+      pushLine(discountedQty, promoUnit, true);
+    });
 
-    // 2) Envío (con las tarifas del admin y la regla de 2 productos = gratis).
+    // 2) Envío (con las tarifas del admin; gratis si el pedido lleva una funda).
     const settings = await loadShippingSettings(supabase);
     const ship = computeShippingCents(
       data.deliveryMethod,
-      { postalCode: data.shippingPostalCode, subtotalCents: subtotal, itemCount },
+      { postalCode: data.shippingPostalCode, subtotalCents: subtotal, caseCount },
       settings,
     );
     if (ship > 0) {
@@ -267,7 +302,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       });
     }
 
-    const discountCents = originalSubtotal - subtotal;
+    const discountCents = originalSubtotal - codeSubtotal;
+    const promoCents = codeSubtotal - subtotal;
 
     // 3) Parámetros de la sesión de Stripe Checkout (hosted).
     const params: Record<string, unknown> = {
@@ -304,6 +340,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
               discount_cents: String(discountCents),
             }
           : {}),
+        ...(promoCents > 0 ? { promo_cents: String(promoCents) } : {}),
       },
       success_url: `${base}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout`,
@@ -358,15 +395,14 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
     const ids = [...new Set(data.items.map((i) => i.variantId))];
     const { data: rows, error } = await supabase
       .from("product_variants")
-      .select("id, price_cents, currency, stock, title, products!inner ( handle, title, status )")
+      .select("id, price_cents, currency, stock, title, products!inner ( handle, title, status, tags, is_custom )")
       .in("id", ids);
     if (error) return { error: `No se pudo validar el carrito: ${error.message}` };
 
     const byId = new Map((rows as unknown as VariantRow[]).map((r) => [r.id, r]));
 
-    let subtotal = 0;
-    let originalSubtotal = 0;
-    const rpcItems: Array<Record<string, unknown>> = [];
+    type CashLine = { item: (typeof data.items)[number]; v: VariantRow; unitCents: number; isCase: boolean };
+    const lines: CashLine[] = [];
     for (const item of data.items) {
       const v = byId.get(item.variantId);
       if (!v || !v.products || v.products.status !== "active") {
@@ -375,24 +411,43 @@ export const createCashPickupOrder = createServerFn({ method: "POST" })
       if (v.stock < item.quantity) {
         return { error: `Sin stock suficiente de "${v.products.title}" (quedan ${v.stock}).` };
       }
-      const unitCents = applyPercentDiscount(v.price_cents, percent);
-      subtotal += unitCents * item.quantity;
-      originalSubtotal += v.price_cents * item.quantity;
-      const isDefault = !v.title || v.title === "Default Title";
-      const name = isDefault ? v.products.title : `${v.products.title} — ${v.title}`;
-      rpcItems.push({
-        variant_id: v.id,
-        product_handle: v.products.handle,
-        title: name,
-        unit_price_cents: unitCents,
-        quantity: item.quantity,
-        attributes: item.attributes ?? [],
-        ...(item.customDesignId ? { custom_design_id: item.customDesignId } : {}),
+      lines.push({
+        item,
+        v,
+        unitCents: applyPercentDiscount(v.price_cents, percent),
+        isCase: isCaseProduct(v.products.tags, { custom: !!v.products.is_custom || !!item.customDesignId }),
       });
     }
+    const split = splitMultiCaseDiscount(
+      lines.map((l) => ({ unitCents: l.unitCents, quantity: l.item.quantity, isCase: l.isCase })),
+    );
+
+    let subtotal = 0;
+    let originalSubtotal = 0;
+    let codeSubtotal = 0;
+    const rpcItems: Array<Record<string, unknown>> = [];
+    lines.forEach(({ item, v, unitCents }, idx) => {
+      const products = v.products!;
+      const promoUnit = applyPercentDiscount(unitCents, MULTI_CASE_DISCOUNT_PERCENT);
+      const { fullQty, discountedQty } = split[idx];
+      subtotal += unitCents * fullQty + promoUnit * discountedQty;
+      codeSubtotal += unitCents * item.quantity;
+      originalSubtotal += v.price_cents * item.quantity;
+      const isDefault = !v.title || v.title === "Default Title";
+      const name = isDefault ? products.title : `${products.title} — ${v.title}`;
+      const base = {
+        variant_id: v.id,
+        product_handle: products.handle,
+        attributes: item.attributes ?? [],
+        ...(item.customDesignId ? { custom_design_id: item.customDesignId } : {}),
+      };
+      if (fullQty > 0) rpcItems.push({ ...base, title: name, unit_price_cents: unitCents, quantity: fullQty });
+      if (discountedQty > 0)
+        rpcItems.push({ ...base, title: `${name}${PROMO_SUFFIX}`, unit_price_cents: promoUnit, quantity: discountedQty });
+    });
 
     const discountNote = discount
-      ? discountNoteText(discount.code, percent, originalSubtotal - subtotal)
+      ? discountNoteText(discount.code, percent, originalSubtotal - codeSubtotal)
       : null;
 
     const currency = ((rows as unknown as VariantRow[])[0]?.currency || "eur").toUpperCase();

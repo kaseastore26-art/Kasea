@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getShopSettingsAdmin, updateShopSettings } from "@/lib/admin-catalog.functions";
-import { FREE_SHIPPING_MIN_ITEMS, HOME_DELIVERY_LABEL, NACEX_POINT_ENABLED } from "@/lib/pricing";
+import { HOME_DELIVERY_LABEL, NACEX_POINT_ENABLED } from "@/lib/pricing";
 
 export const Route = createFileRoute("/_authenticated/admin/ajustes")({
   component: AdminAjustes,
@@ -91,8 +91,8 @@ function AdminAjustes() {
                 onChange={(e) => setFlat(e.target.value)}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Coste del envío a domicilio (península). Con {FREE_SHIPPING_MIN_ITEMS} productos o más en el
-                pedido, el envío es gratis automáticamente.
+                Coste del envío a domicilio (península). Si el pedido lleva al menos una funda, el envío es
+                gratis automáticamente.
               </p>
             </div>
 

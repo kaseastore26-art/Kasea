@@ -45,7 +45,7 @@ export const Route = createFileRoute("/")({
     seo({
       title: "Fundas para iPhone personalizadas con tu foto | Kasea Store",
       description:
-        "Fundas para iPhone personalizadas con tu foto o tu diseño, y fundas con diseños exclusivos. Sublimación 3D con colores vivos, compra segura y envío gratis comprando 2 productos.",
+        "Fundas para iPhone personalizadas con tu foto o tu diseño, y fundas con diseños exclusivos. Sublimación 3D con colores vivos, envío gratis en todas las fundas.",
       path: "/",
     }),
   component: HomePage,
