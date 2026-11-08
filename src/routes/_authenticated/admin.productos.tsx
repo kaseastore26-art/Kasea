@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Loader2, Upload, Package, ImageOff, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload, Package, ImageOff, ArrowUp, ArrowDown, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,11 @@ function AdminProductos() {
     queryKey: ["admin-products"],
     queryFn: () => listFn(),
   });
+
+  const [search, setSearch] = useState("");
+  const norm = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const q = norm(search);
+  const shown = q ? products.filter((p) => norm(p.title).includes(q) || norm(p.handle).includes(q)) : products;
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -283,6 +288,20 @@ function AdminProductos() {
           <p className="mt-3 text-sm text-muted-foreground">Aún no hay productos. Crea el primero.</p>
         </div>
       ) : (
+        <>
+        <div className="relative mb-4 max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="p-search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar funda por nombre…"
+            className="pl-9"
+          />
+        </div>
+        {shown.length === 0 && (
+          <p className="mb-4 text-sm text-muted-foreground">Ninguna funda se llama así. Prueba con otra palabra.</p>
+        )}
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full text-sm">
             <thead className="border-b bg-secondary/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -295,7 +314,9 @@ function AdminProductos() {
               </tr>
             </thead>
             <tbody>
-              {products.map((p, index) => (
+              {shown.map((p) => {
+                const index = products.indexOf(p);
+                return (
                 <tr key={p.id} className="border-b last:border-0 hover:bg-secondary/20">
                   <td className="p-3">
                     <div className="flex items-center gap-3">
@@ -343,7 +364,7 @@ function AdminProductos() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        disabled={index === 0 || reordering}
+                        disabled={index === 0 || reordering || !!q}
                         onClick={() => move(index, "up")}
                         aria-label="Subir"
                       >
@@ -352,7 +373,7 @@ function AdminProductos() {
                       <Button
   variant="ghost"
   size="icon"
-  disabled={index === products.length - 1 || reordering}
+  disabled={index === products.length - 1 || reordering || !!q}
   onClick={() => move(index, "down")}
   aria-label="Bajar"
 >
@@ -390,10 +411,12 @@ function AdminProductos() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>

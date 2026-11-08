@@ -251,8 +251,21 @@ function AdminPedidos() {
                           {(o.order_items ?? []).map((it: any) => (
                             <li key={it.id} className="border-b pb-3 last:border-0">
                               <div className="flex justify-between gap-2">
-                                <span>
-                                  {it.title} × {it.quantity}
+                                <span className="flex items-center gap-3">
+                                  {it.product_image && !it.custom_designs && (
+                                    <a
+                                      href={it.product_handle ? `/product/${it.product_handle}` : it.product_image}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title="Ver la funda"
+                                      className="block h-20 w-16 flex-shrink-0 overflow-hidden rounded border bg-white"
+                                    >
+                                      <img src={it.product_image} alt={it.title} className="h-full w-full object-contain" />
+                                    </a>
+                                  )}
+                                  <span>
+                                    {it.title} × {it.quantity}
+                                  </span>
                                 </span>
                                 <span className="tabular-nums">
                                   {formatPrice((it.unit_price_cents * it.quantity) / 100, o.currency || "EUR")}

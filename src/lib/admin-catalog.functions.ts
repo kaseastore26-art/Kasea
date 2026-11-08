@@ -188,7 +188,37 @@ export const listOrdersAdmin = createServerFn({ method: "GET" })
       .select("*, order_items(*, custom_designs(*))")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
-    return data ?? [];
+    const orders = (data ?? []) as any[];
+
+    // Foto y enlace de cada funda pedida, para reconocerla sin buscarla.
+    try {
+      const variantIds = [
+        ...new Set(
+          orders.flatMap((o) => (o.order_items ?? []).map((it: any) => it.variant_id).filter(Boolean)),
+        ),
+      ] as string[];
+      if (variantIds.length) {
+        const { data: vs } = await (ctx.supabase as any)
+          .from("product_variants")
+          .select("id, products(handle, product_images(url, position))")
+          .in("id", variantIds);
+        const info = new Map<string, { image: string | null; handle: string | null }>();
+        for (const v of (vs ?? []) as any[]) {
+          const imgs = [...(v.products?.product_images ?? [])].sort((a: any, b: any) => a.position - b.position);
+          info.set(v.id, { image: imgs[0]?.url ?? null, handle: v.products?.handle ?? null });
+        }
+        for (const o of orders) {
+          for (const it of o.order_items ?? []) {
+            const i = it.variant_id ? info.get(it.variant_id) : undefined;
+            it.product_image = i?.image ?? null;
+            it.product_handle = it.product_handle || i?.handle || null;
+          }
+        }
+      }
+    } catch {
+      /* sin fotos: el pedido se enseña igual */
+    }
+    return orders;
   });
 
 const ORDER_STATUSES = ["paid", "fulfilled", "delivered", "cancelled", "refunded"] as const;
