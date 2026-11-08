@@ -47,7 +47,7 @@ function ProductCard({ product }: { product: ShopifyProduct }) {
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-display text-lg leading-tight">{p.title}</h2>
 
-        <span className="text-sm tabular-nums text-foreground/80">
+        <span className="whitespace-nowrap text-sm tabular-nums text-foreground/80">
           {formatPrice(
             p.priceRange.minVariantPrice.amount,
             p.priceRange.minVariantPrice.currencyCode,
@@ -55,7 +55,7 @@ function ProductCard({ product }: { product: ShopifyProduct }) {
         </span>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-auto pt-4">
         <Link
           to="/product/$handle"
           params={{ handle: p.handle }}
