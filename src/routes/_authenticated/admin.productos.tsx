@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/shopify";
 import { uploadImage, pickFile } from "@/lib/admin-upload";
+import { prepareProductImage } from "@/lib/product-image";
 import {
   listProductsAdmin,
   upsertProduct,
@@ -17,101 +18,17 @@ import {
   setProductOrder,
   updateProductImageUrl,
 } from "@/lib/admin-catalog.functions";
+// Descarga la foto actual y la deja con fondo blanco y del mismo tamaño que las demás.
 async function normalizeImageToWhite(url: string): Promise<File> {
   const response = await fetch(url, { cache: "no-store" });
-
   if (!response.ok) {
     throw new Error("No se pudo descargar la imagen.");
   }
-
-  const blob = await response.blob();
-  const bitmap = await createImageBitmap(blob);
-
-  const canvas = document.createElement("canvas");
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-
-  const ctx = canvas.getContext("2d", {
-    willReadFrequently: true,
-  });
-
-  if (!ctx) {
-    throw new Error("No se pudo procesar la imagen.");
+  const file = await prepareProductImage(await response.blob());
+  if (!file) {
+    throw new Error("La foto no tiene el fondo claro, así que se deja como está.");
   }
-
-  ctx.drawImage(bitmap, 0, 0);
-  bitmap.close();
-
-  const imageData = ctx.getImageData(
-    0,
-    0,
-    canvas.width,
-    canvas.height,
-  );
-
-  const pixels = imageData.data;
-
-  const samples: number[][] = [];
-
-  const points = [
-    [0, 0],
-    [canvas.width - 1, 0],
-    [0, canvas.height - 1],
-    [canvas.width - 1, canvas.height - 1],
-  ];
-
-  for (const [x, y] of points) {
-    const i = (y * canvas.width + x) * 4;
-    samples.push([pixels[i], pixels[i + 1], pixels[i + 2]]);
-  }
-
-  const bgR = samples.reduce((sum, p) => sum + p[0], 0) / samples.length;
-  const bgG = samples.reduce((sum, p) => sum + p[1], 0) / samples.length;
-  const bgB = samples.reduce((sum, p) => sum + p[2], 0) / samples.length;
-
-  const tolerance = 35;
-
-  for (let i = 0; i < pixels.length; i += 4) {
-    const r = pixels[i];
-    const g = pixels[i + 1];
-    const b = pixels[i + 2];
-
-    const distance = Math.sqrt(
-      (r - bgR) ** 2 +
-        (g - bgG) ** 2 +
-        (b - bgB) ** 2,
-    );
-
-    const brightness = (r + g + b) / 3;
-
-    if (distance <= tolerance && brightness >= 215) {
-      pixels[i] = 255;
-      pixels[i + 1] = 255;
-      pixels[i + 2] = 255;
-    }
-  }
-
-  ctx.putImageData(imageData, 0, 0);
-
-  const outputBlob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (result) => {
-        if (result) {
-          resolve(result);
-        } else {
-          reject(new Error("No se pudo crear la imagen."));
-        }
-      },
-      "image/png",
-      1,
-    );
-  });
-
-  return new File(
-    [outputBlob],
-    `producto-fondo-blanco-${Date.now()}.png`,
-    { type: "image/png" },
-  );
+  return file;
 }
 export const Route = createFileRoute("/_authenticated/admin/productos")({
   component: AdminProductos,
@@ -134,7 +51,7 @@ interface FormState {
 const EMPTY: FormState = {
   title: "",
   description: "",
-  priceEuros: "14.99",
+  priceEuros: "19.99",
   stock: "0",
   status: "active",
   imageUrl: "",
@@ -262,7 +179,7 @@ function AdminProductos() {
       return;
     }
 
-    if (!confirm(`¿Convertir el fondo de "${p.title}" a blanco?`)) {
+    if (!confirm(`¿Poner la foto de "${p.title}" con fondo blanco y del mismo tamaño que las demás?`)) {
       return;
     }
 
@@ -282,7 +199,7 @@ function AdminProductos() {
 
       await qc.invalidateQueries({ queryKey: ["admin-products"] });
 
-      toast.success("Fondo convertido a blanco");
+      toast.success("Foto igualada");
     } catch (e) {
       toast.error("No se pudo normalizar la imagen", {
         description: e instanceof Error ? e.message : undefined,
@@ -291,16 +208,69 @@ function AdminProductos() {
       setNormalizing(false);
     }
   }
+  async function normalizeAll() {
+    const list = products.filter((p) => p.imageUrl && !p.isCustom);
+    if (list.length === 0) return;
+    if (
+      !confirm(
+        `¿Igualar las fotos de ${list.length} productos? Se pone el fondo blanco y todas las fundas del mismo tamaño. Las fotos sin fondo claro se dejan como están.`,
+      )
+    ) {
+      return;
+    }
+    setNormalizing(true);
+    let ok = 0;
+    let skipped = 0;
+    let failed = 0;
+    const t = toast.loading(`Igualando fotos… 0 / ${list.length}`);
+    for (const [i, p] of list.entries()) {
+      try {
+        const res = await fetch(p.imageUrl, { cache: "no-store" });
+        if (!res.ok) throw new Error("descarga");
+        const file = await prepareProductImage(await res.blob());
+        if (!file) {
+          skipped++;
+        } else {
+          const newUrl = await uploadImage(file, "products");
+          await updateImageFn({ data: { productId: p.id, imageUrl: newUrl } });
+          ok++;
+        }
+      } catch {
+        failed++;
+      }
+      toast.loading(`Igualando fotos… ${i + 1} / ${list.length}`, { id: t });
+    }
+    await qc.invalidateQueries({ queryKey: ["admin-products"] });
+    toast.success(
+      `Listo: ${ok} fotos igualadas` +
+        (skipped ? `, ${skipped} sin fondo claro (sin tocar)` : "") +
+        (failed ? `, ${failed} con error` : ""),
+      { id: t },
+    );
+    setNormalizing(false);
+  }
+
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-2xl">Productos</h2>
           <p className="text-sm text-muted-foreground">Gestiona catálogo, precios y stock.</p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" /> Nuevo producto
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={normalizeAll}
+            disabled={normalizing || products.length === 0}
+            className="gap-2"
+            title="Fondo blanco y todas las fundas del mismo tamaño"
+          >
+            {normalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <span aria-hidden>✨</span>} Igualar todas las fotos
+          </Button>
+          <Button onClick={openCreate} className="gap-2">
+            <Plus className="h-4 w-4" /> Nuevo producto
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -394,8 +364,8 @@ function AdminProductos() {
   size="icon"
   onClick={() => normalizeOneProduct(p)}
   disabled={normalizing}
-  aria-label="Fondo blanco"
-  title="Convertir fondo a blanco"
+  aria-label="Igualar foto"
+  title="Fondo blanco y mismo tamaño"
 >
   ✨
 </Button>
