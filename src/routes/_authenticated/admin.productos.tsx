@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Loader2, Upload, Package, ImageOff, ArrowUp, ArrowDown, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload, Package, ImageOff, ArrowUp, ArrowDown, Search, Maximize2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/shopify";
 import { uploadImage, pickFile } from "@/lib/admin-upload";
-import { prepareProductImage } from "@/lib/product-image";
+import { whitenBackground, equalizeSize } from "@/lib/product-image";
 import {
   listProductsAdmin,
   upsertProduct,
@@ -18,18 +18,23 @@ import {
   setProductOrder,
   updateProductImageUrl,
 } from "@/lib/admin-catalog.functions";
-// Descarga la foto actual y la deja con fondo blanco y del mismo tamaño que las demás.
-async function normalizeImageToWhite(url: string): Promise<File> {
+async function downloadImage(url: string): Promise<Blob> {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
     throw new Error("No se pudo descargar la imagen.");
   }
-  const file = await prepareProductImage(await response.blob());
-  if (!file) {
-    throw new Error("La foto no tiene el fondo claro, así que se deja como está.");
-  }
-  return file;
+  return await response.blob();
 }
+
+// Solo fondo blanco (no cambia el tamaño).
+async function normalizeImageToWhite(url: string): Promise<File> {
+  return await whitenBackground(await downloadImage(url));
+}
+
+const ACCESSORY_TAGS = ["accesorios", "colgantes", "protectores", "cargadores", "otros"];
+const isCaseRow = (p: { isCustom: boolean; tags?: string[] | null }) =>
+  !p.isCustom && !(p.tags ?? []).some((t) => ACCESSORY_TAGS.includes(String(t).trim().toLowerCase()));
+
 export const Route = createFileRoute("/_authenticated/admin/productos")({
   component: AdminProductos,
 });
@@ -184,7 +189,7 @@ function AdminProductos() {
       return;
     }
 
-    if (!confirm(`¿Poner la foto de "${p.title}" con fondo blanco y del mismo tamaño que las demás?`)) {
+    if (!confirm(`¿Convertir el fondo de "${p.title}" a blanco?`)) {
       return;
     }
 
@@ -204,7 +209,7 @@ function AdminProductos() {
 
       await qc.invalidateQueries({ queryKey: ["admin-products"] });
 
-      toast.success("Foto igualada");
+      toast.success("Fondo convertido a blanco");
     } catch (e) {
       toast.error("No se pudo normalizar la imagen", {
         description: e instanceof Error ? e.message : undefined,
@@ -213,12 +218,38 @@ function AdminProductos() {
       setNormalizing(false);
     }
   }
-  async function normalizeAll() {
-    const list = products.filter((p) => p.imageUrl && !p.isCustom);
+  // Solo tamaño, de una funda.
+  async function equalizeOne(p: ProductRow) {
+    if (!p.imageUrl) {
+      toast.error("Este producto no tiene imagen.");
+      return;
+    }
+    if (!confirm(`¿Poner "${p.title}" del mismo tamaño que las demás? El fondo no se toca.`)) return;
+    setNormalizing(true);
+    try {
+      const file = await equalizeSize(await downloadImage(p.imageUrl));
+      if (!file) {
+        toast.message("Esta foto no tiene el fondo liso, así que se deja como está.");
+        return;
+      }
+      const newUrl = await uploadImage(file, "products");
+      await updateImageFn({ data: { productId: p.id, imageUrl: newUrl } });
+      await qc.invalidateQueries({ queryKey: ["admin-products"] });
+      toast.success("Tamaño igualado");
+    } catch (e) {
+      toast.error("No se pudo igualar la foto", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setNormalizing(false);
+    }
+  }
+
+  // Solo tamaño, de todas las fundas (no toca accesorios ni la personalizada).
+  async function equalizeAll() {
+    const list = products.filter((p) => p.imageUrl && isCaseRow(p));
     if (list.length === 0) return;
     if (
       !confirm(
-        `¿Igualar las fotos de ${list.length} productos? Se pone el fondo blanco y todas las fundas del mismo tamaño. Las fotos sin fondo claro se dejan como están.`,
+        `¿Poner las ${list.length} fundas del mismo tamaño? El fondo no se toca, y los accesorios tampoco. Las fotos sin fondo liso se dejan como están.`,
       )
     ) {
       return;
@@ -227,12 +258,10 @@ function AdminProductos() {
     let ok = 0;
     let skipped = 0;
     let failed = 0;
-    const t = toast.loading(`Igualando fotos… 0 / ${list.length}`);
+    const t = toast.loading(`Igualando tamaño… 0 / ${list.length}`);
     for (const [i, p] of list.entries()) {
       try {
-        const res = await fetch(p.imageUrl, { cache: "no-store" });
-        if (!res.ok) throw new Error("descarga");
-        const file = await prepareProductImage(await res.blob());
+        const file = await equalizeSize(await downloadImage(p.imageUrl));
         if (!file) {
           skipped++;
         } else {
@@ -243,12 +272,12 @@ function AdminProductos() {
       } catch {
         failed++;
       }
-      toast.loading(`Igualando fotos… ${i + 1} / ${list.length}`, { id: t });
+      toast.loading(`Igualando tamaño… ${i + 1} / ${list.length}`, { id: t });
     }
     await qc.invalidateQueries({ queryKey: ["admin-products"] });
     toast.success(
-      `Listo: ${ok} fotos igualadas` +
-        (skipped ? `, ${skipped} sin fondo claro (sin tocar)` : "") +
+      `Listo: ${ok} fundas igualadas` +
+        (skipped ? `, ${skipped} sin fondo liso (sin tocar)` : "") +
         (failed ? `, ${failed} con error` : ""),
       { id: t },
     );
@@ -265,12 +294,12 @@ function AdminProductos() {
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
-            onClick={normalizeAll}
+            onClick={equalizeAll}
             disabled={normalizing || products.length === 0}
             className="gap-2"
-            title="Fondo blanco y todas las fundas del mismo tamaño"
+            title="Todas las fundas del mismo tamaño (el fondo no se toca)"
           >
-            {normalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <span aria-hidden>✨</span>} Igualar todas las fotos
+            {normalizing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Maximize2 className="h-4 w-4" />} Igualar tamaño de las fundas
           </Button>
           <Button onClick={openCreate} className="gap-2">
             <Plus className="h-4 w-4" /> Nuevo producto
@@ -383,10 +412,21 @@ function AdminProductos() {
 <Button
   variant="ghost"
   size="icon"
+  onClick={() => equalizeOne(p)}
+  disabled={normalizing}
+  aria-label="Igualar tamaño"
+  title="Mismo tamaño que las demás (el fondo no se toca)"
+>
+  <Maximize2 className="h-4 w-4" />
+</Button>
+
+<Button
+  variant="ghost"
+  size="icon"
   onClick={() => normalizeOneProduct(p)}
   disabled={normalizing}
-  aria-label="Igualar foto"
-  title="Fondo blanco y mismo tamaño"
+  aria-label="Fondo blanco"
+  title="Convertir fondo a blanco"
 >
   ✨
 </Button>
