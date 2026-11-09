@@ -99,7 +99,8 @@ export const MODEL_SPECS: Record<string, ModelSpec> = {
   },
   // 16 Pro Max: medido en funda real (8 × 16,3 cm; hueco 4,25 × 4,1 cm, a 0,3 cm de arriba y 0,4 cm de la izquierda).
   "iPhone 16 Pro Max": { ratio: "77.6 / 163", radius: 12.5, cam: "square", camW: 53, camRatio: "1 / 1", camTop: 1.85, camLeft: 4.75 },
-  "iPhone 16 Pro": { ratio: "71.5 / 149.6", radius: 12.5, cam: "square", camW: 51, camRatio: "1 / 1" },
+  // 16 Pro: medido en funda real (7,35 × 15,2 cm; hueco 4,2 × 4,2 cm, a 0,35 cm de arriba y 0,4 cm de la izquierda).
+  "iPhone 16 Pro": { ratio: "71.5 / 149.6", radius: 12.5, cam: "square", camW: 57.1, camRatio: "1 / 1", camTop: 2.3, camLeft: 5.4 },
   // 16 Plus: medido en funda real (pastilla 1,4 cm × de 0,4 a 4,7 cm; bulto del flash hasta 3,5 cm).
   "iPhone 16 Plus": {
     ratio: "77.8 / 160.9",
