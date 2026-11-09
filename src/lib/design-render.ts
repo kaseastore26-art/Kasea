@@ -496,7 +496,10 @@ export async function renderPrintFileLayers(
   canvas.height = H;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas no disponible");
-  ctx.fillStyle = "#ffffff";
+  // Fondo del collage en TODA la hoja, no solo en la plantilla: así sobra color
+  // para los bordes de arriba y abajo de la funda, que en sublimación 3D son
+  // los que más se estiran y pueden quedarse sin tinta.
+  ctx.fillStyle = opts.background || "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
   const x0 = Math.round((W - tpl.widthPx) / 2);
@@ -505,9 +508,6 @@ export async function renderPrintFileLayers(
   ctx.beginPath();
   ctx.rect(x0, y0, tpl.widthPx, tpl.heightPx);
   ctx.clip();
-  // Fondo del collage (cubre también los laterales de la plantilla)
-  ctx.fillStyle = opts.background || "#ffffff";
-  ctx.fillRect(x0, y0, tpl.widthPx, tpl.heightPx);
   layers.forEach((l, i) =>
     drawPhoto(ctx, bitmaps[i], clampFree(l.t, stage), PX_PER_MM, x0 + tpl.widthPx / 2, y0 + tpl.heightPx / 2),
   );
