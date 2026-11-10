@@ -7,7 +7,7 @@ import { Loader2, ChevronDown, Package, Truck, Store, AlertTriangle, Trash2, Ban
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/shopify";
-import { listOrdersAdmin, updateOrderStatus, deleteOrderAdmin, markOrderPaid } from "@/lib/admin-catalog.functions";
+import { listOrdersAdmin, updateOrderStatus, deleteOrderAdmin, markOrderPaid, listAbandonedCheckoutsAdmin } from "@/lib/admin-catalog.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/pedidos")({
   component: AdminPedidos,
@@ -110,6 +110,8 @@ function AdminPedidos() {
           </p>
         </div>
       </div>
+
+      <AbandonedCheckouts />
 
       {orders.length === 0 ? (
         <div className="rounded-lg border border-dashed py-16 text-center">
@@ -344,6 +346,77 @@ function AdminPedidos() {
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// Pedidos que se quedaron a medias (se les mandó el recordatorio automático).
+function AbandonedCheckouts() {
+  const listFn = useServerFn(listAbandonedCheckoutsAdmin);
+  const { data: rows = [] } = useQuery({ queryKey: ["admin", "abandoned"], queryFn: () => listFn() });
+  const [open, setOpen] = useState(false);
+  const pending = (rows as any[]).filter((r) => !r.recovered).length;
+  const eur = (c: number) => new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format((c ?? 0) / 100);
+
+  return (
+    <div className="mb-6 rounded-lg border bg-card">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+      >
+        <span className="text-sm font-medium">
+          Pedidos a medias{" "}
+          <span className="text-muted-foreground">
+            ({rows.length}
+            {rows.length ? ` · ${pending} sin terminar` : ""})
+          </span>
+        </span>
+        <span className="text-xs text-muted-foreground">{open ? "Ocultar" : "Ver"}</span>
+      </button>
+      {open && (
+        <div className="border-t px-4 py-3">
+          {rows.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nadie ha dejado un pago a medias en los últimos 60 días. Cuando pase, aparecerá aquí y se le enviará un
+              recordatorio automático.
+            </p>
+          ) : (
+            <ul className="divide-y">
+              {(rows as any[]).map((r) => (
+                <li key={r.id ?? r.stripe_session_id} className="flex flex-wrap items-start justify-between gap-3 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {r.customer_name || "Sin nombre"}{" "}
+                      {r.recovered ? (
+                        <span className="ml-1 rounded bg-green-100 px-1.5 py-0.5 text-[11px] text-green-800">Compró después</span>
+                      ) : (
+                        <span className="ml-1 rounded bg-amber-100 px-1.5 py-0.5 text-[11px] text-amber-800">Sin terminar</span>
+                      )}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {r.email}
+                      {r.phone ? ` · ${r.phone}` : ""}
+                    </p>
+                    <p className="mt-1 text-muted-foreground">
+                      {((r.items ?? []) as any[])
+                        .map((it) => `${it.title}${it.quantity > 1 ? ` × ${it.quantity}` : ""}${it.model ? ` (${it.model})` : ""}`)
+                        .join(", ")}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium tabular-nums">{eur(r.total_cents)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(r.created_at).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </div>

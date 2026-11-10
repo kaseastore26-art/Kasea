@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShoppingBag, ArrowLeft, Truck, Lock, Loader2, Store, CreditCard, Banknote, Tag, X, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,9 @@ function CheckoutPage() {
   const [delivery, setDelivery] = useState<DeliveryMethod>("delivery");
   // Solo aplica a recogida en tienda: pagar ahora con tarjeta o en efectivo allí.
   const [payMethod, setPayMethod] = useState<"card" | "cash">("card");
-  const [customerName, setCustomerName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const customerName = `${firstName.trim()} ${lastName.trim()}`.trim();
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
@@ -58,6 +60,28 @@ function CheckoutPage() {
   const [shippingCountry, setShippingCountry] = useState("España");
   const [nacexPostalCode, setNacexPostalCode] = useState("");
   const [nacexAddress, setNacexAddress] = useState("");
+
+  // Datos del cliente que vienen del enlace "tu pedido se quedó a medias".
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("kasea_checkout_prefill");
+      if (!raw) return;
+      sessionStorage.removeItem("kasea_checkout_prefill");
+      const c = JSON.parse(raw) as Record<string, string>;
+      const parts = (c.name ?? "").trim().split(/\s+/);
+      if (parts[0]) setFirstName(parts[0]);
+      if (parts.length > 1) setLastName(parts.slice(1).join(" "));
+      if (c.email) setCustomerEmail(c.email);
+      if (c.phone) setCustomerPhone(c.phone);
+      if (c.address) setShippingAddress(c.address);
+      if (c.postalCode) setShippingPostalCode(c.postalCode);
+      if (c.city) setShippingCity(c.city);
+      if (c.province) setShippingProvince(c.province);
+      if (c.country) setShippingCountry(c.country);
+    } catch {
+      /* sin datos guardados */
+    }
+  }, []);
 
   // Código de descuento
   const [codeInput, setCodeInput] = useState("");
@@ -101,9 +125,9 @@ function CheckoutPage() {
 
   const onPay = async () => {
     // Datos básicos obligatorios para cualquier pedido
-    if (!customerName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !customerEmail.trim() || !customerPhone.trim()) {
       toast.error("Completa tus datos", {
-        description: "Necesitamos nombre, email y teléfono para continuar.",
+        description: "Necesitamos nombre, apellidos, email y teléfono para que el envío llegue bien.",
       });
       return;
     }
@@ -203,9 +227,9 @@ function CheckoutPage() {
   };
   // Recogida en tienda + pago en efectivo: registra el pedido sin pasar por Stripe.
   const onCashOrder = async () => {
-    if (!customerName.trim() || !customerPhone.trim()) {
+    if (!firstName.trim() || !lastName.trim() || !customerPhone.trim()) {
       toast.error("Completa tus datos", {
-        description: "Necesitamos tu nombre y teléfono para preparar tu pedido.",
+        description: "Necesitamos tu nombre, apellidos y teléfono para preparar tu pedido.",
       });
       return;
     }
@@ -497,15 +521,31 @@ function CheckoutPage() {
               </p>
 
               <div className="space-y-3">
-                <div>
-                  <label className="mb-1 block text-xs font-medium">
-                    Nombre y apellidos *
-                  </label>
-                  <Input
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Tu nombre y apellidos"
-                  />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="co-first" className="mb-1 block text-xs font-medium">
+                      Nombre *
+                    </label>
+                    <Input
+                      id="co-first"
+                      autoComplete="given-name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="Tu nombre"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="co-last" className="mb-1 block text-xs font-medium">
+                      Apellidos *
+                    </label>
+                    <Input
+                      id="co-last"
+                      autoComplete="family-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Tus apellidos"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -518,6 +558,9 @@ function CheckoutPage() {
                     onChange={(e) => setCustomerEmail(e.target.value)}
                     placeholder="tu@email.com"
                   />
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Te enviaremos aquí la confirmación y, si tu pedido se queda a medias, un único aviso.
+                  </p>
                 </div>
 
                 <div>

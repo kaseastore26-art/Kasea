@@ -29,6 +29,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FundasPersonalizadasIndexRouteImport } from './routes/fundas-personalizadas.index'
 import { Route as CheckoutIndexRouteImport } from './routes/checkout.index'
+import { Route as RecuperarBajaRouteImport } from './routes/recuperar.baja'
+import { Route as RecuperarSessionRouteImport } from './routes/recuperar.$session'
 import { Route as ProductHandleRouteImport } from './routes/product.$handle'
 import { Route as FundasPersonalizadasModeloRouteImport } from './routes/fundas-personalizadas.$modelo'
 import { Route as CheckoutExitoRouteImport } from './routes/checkout.exito'
@@ -148,6 +150,16 @@ const FundasPersonalizadasIndexRoute =
 const CheckoutIndexRoute = CheckoutIndexRouteImport.update({
   id: '/checkout/',
   path: '/checkout/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarBajaRoute = RecuperarBajaRouteImport.update({
+  id: '/recuperar/baja',
+  path: '/recuperar/baja',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarSessionRoute = RecuperarSessionRouteImport.update({
+  id: '/recuperar/$session',
+  path: '/recuperar/$session',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductHandleRoute = ProductHandleRouteImport.update({
@@ -289,6 +301,8 @@ export interface FileRoutesByFullPath {
   '/checkout/exito': typeof CheckoutExitoRoute
   '/fundas-personalizadas/$modelo': typeof FundasPersonalizadasModeloRoute
   '/product/$handle': typeof ProductHandleRoute
+  '/recuperar/$session': typeof RecuperarSessionRoute
+  '/recuperar/baja': typeof RecuperarBajaRoute
   '/checkout/': typeof CheckoutIndexRoute
   '/fundas-personalizadas/': typeof FundasPersonalizadasIndexRoute
   '/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
@@ -329,6 +343,8 @@ export interface FileRoutesByTo {
   '/checkout/exito': typeof CheckoutExitoRoute
   '/fundas-personalizadas/$modelo': typeof FundasPersonalizadasModeloRoute
   '/product/$handle': typeof ProductHandleRoute
+  '/recuperar/$session': typeof RecuperarSessionRoute
+  '/recuperar/baja': typeof RecuperarBajaRoute
   '/checkout': typeof CheckoutIndexRoute
   '/fundas-personalizadas': typeof FundasPersonalizadasIndexRoute
   '/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
@@ -372,6 +388,8 @@ export interface FileRoutesById {
   '/checkout/exito': typeof CheckoutExitoRoute
   '/fundas-personalizadas/$modelo': typeof FundasPersonalizadasModeloRoute
   '/product/$handle': typeof ProductHandleRoute
+  '/recuperar/$session': typeof RecuperarSessionRoute
+  '/recuperar/baja': typeof RecuperarBajaRoute
   '/checkout/': typeof CheckoutIndexRoute
   '/fundas-personalizadas/': typeof FundasPersonalizadasIndexRoute
   '/_authenticated/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
@@ -415,6 +433,8 @@ export interface FileRouteTypes {
     | '/checkout/exito'
     | '/fundas-personalizadas/$modelo'
     | '/product/$handle'
+    | '/recuperar/$session'
+    | '/recuperar/baja'
     | '/checkout/'
     | '/fundas-personalizadas/'
     | '/admin/ajustes'
@@ -455,6 +475,8 @@ export interface FileRouteTypes {
     | '/checkout/exito'
     | '/fundas-personalizadas/$modelo'
     | '/product/$handle'
+    | '/recuperar/$session'
+    | '/recuperar/baja'
     | '/checkout'
     | '/fundas-personalizadas'
     | '/admin/ajustes'
@@ -497,6 +519,8 @@ export interface FileRouteTypes {
     | '/checkout/exito'
     | '/fundas-personalizadas/$modelo'
     | '/product/$handle'
+    | '/recuperar/$session'
+    | '/recuperar/baja'
     | '/checkout/'
     | '/fundas-personalizadas/'
     | '/_authenticated/admin/ajustes'
@@ -535,6 +559,8 @@ export interface RootRouteChildren {
   CheckoutExitoRoute: typeof CheckoutExitoRoute
   FundasPersonalizadasModeloRoute: typeof FundasPersonalizadasModeloRoute
   ProductHandleRoute: typeof ProductHandleRoute
+  RecuperarSessionRoute: typeof RecuperarSessionRoute
+  RecuperarBajaRoute: typeof RecuperarBajaRoute
   CheckoutIndexRoute: typeof CheckoutIndexRoute
   FundasPersonalizadasIndexRoute: typeof FundasPersonalizadasIndexRoute
 }
@@ -679,6 +705,20 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout/'
       preLoaderRoute: typeof CheckoutIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar/baja': {
+      id: '/recuperar/baja'
+      path: '/recuperar/baja'
+      fullPath: '/recuperar/baja'
+      preLoaderRoute: typeof RecuperarBajaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar/$session': {
+      id: '/recuperar/$session'
+      path: '/recuperar/$session'
+      fullPath: '/recuperar/$session'
+      preLoaderRoute: typeof RecuperarSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/product/$handle': {
@@ -907,6 +947,8 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutExitoRoute: CheckoutExitoRoute,
   FundasPersonalizadasModeloRoute: FundasPersonalizadasModeloRoute,
   ProductHandleRoute: ProductHandleRoute,
+  RecuperarSessionRoute: RecuperarSessionRoute,
+  RecuperarBajaRoute: RecuperarBajaRoute,
   CheckoutIndexRoute: CheckoutIndexRoute,
   FundasPersonalizadasIndexRoute: FundasPersonalizadasIndexRoute,
 }

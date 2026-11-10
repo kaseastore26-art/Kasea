@@ -67,6 +67,110 @@ async function stripeGet(path: string, secret: string): Promise<any> {
   return res.json();
 }
 
+// ----------------------------------------------------------------------------
+// Pago a medias: la sesión de Stripe caducó sin pagar → un único recordatorio.
+// No se envía si: no hay correo, el cliente pidió no recibir avisos, ya hizo
+// un pedido después, o el evento ya se procesó (Stripe reintenta).
+// ----------------------------------------------------------------------------
+async function handleExpiredSession(event: any, stripeKey: string): Promise<Response> {
+  try {
+    const session: any = event.data?.object ?? {};
+    const metadata = session.metadata ?? {};
+    const email: string = String(metadata.customer_email ?? session.customer_email ?? "").trim();
+    if (!email || !session.id) return new Response("ok (sin correo)", { status: 200 });
+
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    const { normalizeEmail, signEmail, siteUrl } = await import("@/lib/cart-reminder.server");
+    const norm = normalizeEmail(email);
+
+    // Ya procesado (reintento de Stripe).
+    const { data: seen } = await admin.from("stripe_events").select("id").eq("id", event.id).maybeSingle();
+    if (seen) return new Response("ok (ya procesado)", { status: 200 });
+    await admin.from("stripe_events").upsert({ id: event.id, type: event.type }, { onConflict: "id", ignoreDuplicates: true });
+
+    // Sesiones muy antiguas: no se avisa.
+    const createdMs = Number(session.created ?? 0) * 1000;
+    if (createdMs && Date.now() - createdMs > 2 * 24 * 60 * 60 * 1000) {
+      return new Response("ok (antigua)", { status: 200 });
+    }
+
+    // Pidió no recibir avisos.
+    const { data: optout } = await (admin as any)
+      .from("cart_reminder_optouts")
+      .select("email")
+      .eq("email", norm)
+      .maybeSingle();
+    if (optout) return new Response("ok (baja)", { status: 200 });
+
+    // Ya hizo un pedido después de empezar este pago.
+    const since = new Date(createdMs || Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const { data: later } = await admin
+      .from("orders")
+      .select("id")
+      .ilike("email", norm)
+      .gte("created_at", since)
+      .limit(1);
+    if (later && later.length) return new Response("ok (ya compró)", { status: 200 });
+
+    // Líneas del pago (sin la del envío).
+    const li = await stripeGet(
+      `/v1/checkout/sessions/${session.id}/line_items?expand[]=data.price.product&limit=100`,
+      stripeKey,
+    );
+    const items = ((li?.data ?? []) as any[])
+      .filter((row) => row?.price?.product?.metadata?.variant_id)
+      .map((row) => {
+        const product = row.price.product;
+        let model: string | null = null;
+        try {
+          const attrs = product?.metadata?.attrs ? JSON.parse(product.metadata.attrs) : [];
+          model = (attrs as any[]).find((a) => a?.key === "Modelo")?.value ?? null;
+        } catch {
+          /* sin atributos */
+        }
+        return {
+          title: String(product?.name ?? "Funda"),
+          quantity: Number(row?.quantity ?? 1),
+          unit_price_cents: Number(row?.price?.unit_amount ?? 0),
+          imageUrl: (product?.images ?? [])[0] ?? null,
+          model,
+        };
+      });
+    if (!items.length) return new Response("ok (sin productos)", { status: 200 });
+
+    const { sendCartReminderEmail } = await import("@/lib/email");
+    const base = siteUrl();
+    const sig = await signEmail(norm);
+    const currency = String(session.currency ?? "eur").toUpperCase();
+    await sendCartReminderEmail({
+      to: email,
+      customerName: metadata.customer_name ?? null,
+      items,
+      currency,
+      recoverUrl: `${base}/recuperar/${encodeURIComponent(session.id)}`,
+      unsubscribeUrl: `${base}/recuperar/baja?e=${encodeURIComponent(norm)}&k=${sig}`,
+    });
+
+    // Guardar para el panel (Admin → Pedidos → "Pedidos a medias"). Sin correos.
+    await (admin as any).from("abandoned_checkouts").upsert(
+      {
+        stripe_session_id: session.id,
+        email,
+        customer_name: metadata.customer_name ?? null,
+        phone: metadata.customer_phone ?? null,
+        items,
+        total_cents: items.reduce((n: number, it: any) => n + it.unit_price_cents * it.quantity, 0),
+        currency,
+      },
+      { onConflict: "stripe_session_id", ignoreDuplicates: true },
+    );
+    return new Response("ok (recordatorio enviado)", { status: 200 });
+  } catch (err) {
+    console.error("[webhook] recordatorio de pedido a medias:", err);
+    return new Response("ok (error en recordatorio)", { status: 200 });
+  }
+}
+
 export const Route = createFileRoute("/api/stripe-webhook")({
   server: {
     handlers: {
@@ -94,6 +198,9 @@ export const Route = createFileRoute("/api/stripe-webhook")({
         }
 
         const type: string = event?.type ?? "";
+        if (type === "checkout.session.expired") {
+          return await handleExpiredSession(event, stripeKey);
+        }
         const isRelevant =
           type === "checkout.session.completed" || type === "checkout.session.async_payment_succeeded";
         if (!isRelevant) {

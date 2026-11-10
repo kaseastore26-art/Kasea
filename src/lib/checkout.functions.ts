@@ -342,6 +342,9 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
           : {}),
         ...(promoCents > 0 ? { promo_cents: String(promoCents) } : {}),
       },
+      // La página de pago caduca a las 2 h si no se paga: entonces se manda un
+      // único recordatorio de "pedido a medias" (ver api.stripe-webhook).
+      expires_at: Math.floor(Date.now() / 1000) + 2 * 60 * 60,
       success_url: `${base}/checkout/exito?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${base}/checkout`,
     };

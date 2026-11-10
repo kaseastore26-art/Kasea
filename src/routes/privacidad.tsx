@@ -61,6 +61,10 @@ function PrivacidadPage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>Gestionar la compra y su entrega — ejecución del contrato.</li>
             <li>Enviarte correos sobre el estado de tu pedido — ejecución del contrato.</li>
+            <li>
+              Si empiezas un pedido y no terminas el pago, enviarte un único correo recordándotelo — interés
+              legítimo. Puedes darte de baja desde el enlace "No quiero más avisos" de ese correo.
+            </li>
             <li>Analítica web (Google Analytics) — tu consentimiento.</li>
             <li>Obligaciones fiscales y contables — obligación legal.</li>
           </ul>

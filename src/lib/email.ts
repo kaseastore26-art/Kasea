@@ -284,3 +284,77 @@ export async function sendOrderStatusEmail(data: OrderStatusEmailData): Promise<
       : "Tu pedido ha sido entregado — Kasea Store";
   await sendEmail(data.to, subject, buildStatusHtml(data));
 }
+
+// ---- Recordatorio de pedido a medias (carrito abandonado) ----
+export interface CartReminderItem {
+  title: string;
+  quantity: number;
+  unit_price_cents: number;
+  imageUrl?: string | null;
+  model?: string | null;
+}
+export interface CartReminderEmailData {
+  to: string;
+  customerName?: string | null;
+  items: CartReminderItem[];
+  currency: string;
+  recoverUrl: string;
+  unsubscribeUrl: string;
+}
+
+function buildCartReminderHtml(d: CartReminderEmailData): string {
+  const first = (d.customerName ?? "").trim().split(/\s+/)[0];
+  const rows = d.items
+    .map(
+      (it) => `
+        <tr>
+          <td style="padding:12px 0;border-bottom:1px solid #eee;width:72px;vertical-align:middle;">
+            ${
+              it.imageUrl
+                ? `<img src="${escapeHtml(it.imageUrl)}" alt="" width="60" style="display:block;width:60px;height:auto;border-radius:6px;background:#fff;">`
+                : ""
+            }
+          </td>
+          <td style="padding:12px 8px;border-bottom:1px solid #eee;vertical-align:middle;font-size:14px;">
+            ${escapeHtml(it.title)}${it.quantity > 1 ? ` × ${it.quantity}` : ""}
+            ${it.model ? `<br><span style="color:#888;font-size:12px">${escapeHtml(it.model)}</span>` : ""}
+          </td>
+          <td style="padding:12px 0;border-bottom:1px solid #eee;text-align:right;white-space:nowrap;vertical-align:middle;font-size:14px;">
+            ${euros(it.unit_price_cents * it.quantity, d.currency)}
+          </td>
+        </tr>`,
+    )
+    .join("");
+
+  return `
+  <div style="background:#f7f3ec;padding:24px 12px;">
+    <div style="font-family:Georgia,'Times New Roman',serif;max-width:520px;margin:0 auto;background:#fffdf9;color:#2b211b;padding:32px 28px;border-radius:8px;">
+      <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:4px;text-transform:uppercase;color:#a8843f;text-align:center;">Kasea Store</p>
+      <h1 style="margin:0 0 12px;font-size:26px;font-weight:normal;text-align:center;">${first ? `${escapeHtml(first)}, tu` : "Tu"} pedido se quedó a medias</h1>
+      <p style="margin:0 0 20px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#5c4f45;text-align:center;">
+        Te guardamos tu selección para que puedas terminarla cuando quieras.
+      </p>
+      <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;color:#2b211b;">
+        ${rows}
+      </table>
+      <div style="text-align:center;margin:28px 0 8px;">
+        <a href="${escapeHtml(d.recoverUrl)}" style="display:inline-block;background:#2b211b;color:#fffdf9;text-decoration:none;font-family:Arial,Helvetica,sans-serif;font-size:13px;letter-spacing:2px;text-transform:uppercase;padding:15px 30px;border-radius:2px;">Terminar mi pedido</a>
+      </div>
+      <p style="margin:16px 0 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#5c4f45;text-align:center;">
+        ¿Tienes alguna duda con el modelo o el diseño? Escríbenos y te ayudamos.
+      </p>
+    </div>
+    <p style="max-width:520px;margin:16px auto 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.5;color:#9a8c80;text-align:center;">
+      Kasea Store · Fundas para iPhone · Te escribimos porque empezaste un pedido en kasea.es.<br>
+      <a href="${escapeHtml(d.unsubscribeUrl)}" style="color:#9a8c80;">No quiero más avisos</a>
+    </p>
+  </div>`;
+}
+
+/** Recordatorio al cliente que dejó el pago a medias. */
+export async function sendCartReminderEmail(d: CartReminderEmailData): Promise<void> {
+  const first = (d.customerName ?? "").trim().split(/\s+/)[0];
+  const subject = first ? `${first}, tu pedido se quedó a medias` : "Tu pedido se quedó a medias";
+  await sendEmail(d.to, subject, buildCartReminderHtml(d));
+}
+

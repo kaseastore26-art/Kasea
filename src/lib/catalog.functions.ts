@@ -240,3 +240,135 @@ export const getCollectionProductsPublic = createServerFn({ method: "GET" })
 
     return { title: col.title, description: col.description ?? "", products };
   });
+
+// -------- Recuperar un pedido a medias (enlace del correo de recordatorio) --------
+export type RecoveredCartItem = {
+  product: ShopifyProduct;
+  variantId: string;
+  variantTitle: string;
+  price: { amount: string; currencyCode: string };
+  quantity: number;
+  selectedOptions: Array<{ name: string; value: string }>;
+  attributes?: Array<{ key: string; value: string }>;
+  customDesignId?: string;
+};
+export type RecoveredCart = {
+  items: RecoveredCartItem[];
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    postalCode: string;
+    city: string;
+    province: string;
+    country: string;
+  };
+} | { error: string };
+
+export const getAbandonedCartPublic = createServerFn({ method: "GET" })
+  .inputValidator((d: unknown) => z.object({ sessionId: z.string().regex(/^cs_[A-Za-z0-9_]+$/) }).parse(d))
+  .handler(async ({ data }): Promise<RecoveredCart> => {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) return { error: "Pago no configurado." };
+    const get = async (path: string) =>
+      (await fetch(`https://api.stripe.com${path}`, { headers: { Authorization: `Bearer ${key}` } })).json();
+
+    const session = await get(`/v1/checkout/sessions/${data.sessionId}`);
+    if (!session?.id) return { error: "No encontramos este pedido." };
+    if (session.status === "complete") return { error: "Este pedido ya está pagado." };
+
+    const li = await get(`/v1/checkout/sessions/${data.sessionId}/line_items?expand[]=data.price.product&limit=100`);
+    const lines = ((li?.data ?? []) as any[])
+      .map((row) => {
+        const meta = row?.price?.product?.metadata ?? {};
+        let attributes: Array<{ key: string; value: string }> = [];
+        try {
+          if (meta.attrs) attributes = JSON.parse(meta.attrs);
+        } catch {
+          /* ignorar */
+        }
+        return {
+          variantId: String(meta.variant_id ?? ""),
+          customDesignId: meta.custom_design_id ? String(meta.custom_design_id) : undefined,
+          quantity: Number(row?.quantity ?? 1),
+          attributes,
+        };
+      })
+      .filter((l) => l.variantId);
+    if (!lines.length) return { error: "Este pedido ya no tiene productos." };
+
+    // Juntar líneas de la misma variante (p. ej. la de promo de 2.ª funda).
+    const merged = new Map<string, (typeof lines)[number]>();
+    for (const l of lines) {
+      const k = `${l.variantId}::${l.customDesignId ?? ""}::${JSON.stringify(l.attributes)}`;
+      const prev = merged.get(k);
+      if (prev) prev.quantity += l.quantity;
+      else merged.set(k, { ...l });
+    }
+
+    const supabase = publicClient();
+    const variantIds = [...new Set([...merged.values()].map((l) => l.variantId))];
+    const { data: vrows } = await supabase.from("product_variants").select("id, products(handle)").in("id", variantIds);
+    const handleByVariant = new Map(((vrows ?? []) as any[]).map((r) => [r.id, r.products?.handle as string]));
+    const handles = [...new Set([...handleByVariant.values()].filter(Boolean))];
+    const { data: prows } = await supabase
+      .from("products")
+      .select(PRODUCT_SELECT)
+      .in("handle", handles.length ? handles : ["-"])
+      .eq("status", "active");
+    const productByHandle = new Map(
+      ((prows ?? []) as unknown as ProductRow[]).map((r) => [r.handle, rowToShopifyProduct(r)]),
+    );
+
+    const items: RecoveredCartItem[] = [];
+    for (const l of merged.values()) {
+      const product = productByHandle.get(handleByVariant.get(l.variantId) ?? "");
+      const variant = product?.node.variants.edges.find((e) => e.node.id === l.variantId)?.node;
+      if (!product || !variant) continue; // producto retirado: se omite
+      const designUrl = l.attributes.find((a) => a.key === "Diseño" && a.value.startsWith("http"))?.value;
+      items.push({
+        product: designUrl
+          ? { node: { ...product.node, images: { edges: [{ node: { url: designUrl, altText: "Tu diseño personalizado" } }] } } }
+          : product,
+        variantId: variant.id,
+        variantTitle: variant.title,
+        price: variant.price,
+        quantity: l.quantity,
+        selectedOptions: variant.selectedOptions ?? [],
+        attributes: l.attributes.length ? l.attributes : undefined,
+        customDesignId: l.customDesignId,
+      });
+    }
+    if (!items.length) return { error: "Los productos de este pedido ya no están disponibles." };
+
+    const m = session.metadata ?? {};
+    return {
+      items,
+      customer: {
+        name: m.customer_name ?? "",
+        email: m.customer_email ?? session.customer_email ?? "",
+        phone: m.customer_phone ?? "",
+        address: m.shipping_address ?? "",
+        postalCode: m.shipping_postal_code ?? "",
+        city: m.shipping_city ?? "",
+        province: m.shipping_province ?? "",
+        country: m.shipping_country ?? "España",
+      },
+    };
+  });
+
+// -------- "No quiero más avisos" (enlace del correo de recordatorio) --------
+export const optOutCartReminders = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => z.object({ e: z.string().email(), k: z.string().min(8).max(64) }).parse(d))
+  .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
+    const { normalizeEmail, signEmail } = await import("@/lib/cart-reminder.server");
+    const email = normalizeEmail(data.e);
+    if ((await signEmail(email)) !== data.k) return { error: "El enlace no es válido." };
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await (supabaseAdmin as any)
+      .from("cart_reminder_optouts")
+      .upsert({ email }, { onConflict: "email", ignoreDuplicates: true });
+    if (error) return { error: "No se pudo guardar. Inténtalo más tarde." };
+    return { ok: true };
+  });

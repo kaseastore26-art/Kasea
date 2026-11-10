@@ -461,3 +461,35 @@ export const updateProductImageUrl = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+// -------- Pedidos a medias (recordatorio enviado) --------
+export const listAbandonedCheckoutsAdmin = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const ctx = context as unknown as AuthedContext;
+    await assertAdmin(ctx);
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+    const { data, error } = await (admin as any)
+      .from("abandoned_checkouts")
+      .select("*")
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) return [];
+    const rows = (data ?? []) as any[];
+    // ¿Compró después? (pedido con el mismo correo tras el aviso)
+    const emails = [...new Set(rows.map((r) => String(r.email).toLowerCase()))];
+    if (emails.length) {
+      const { data: orders } = await (admin as any)
+        .from("orders")
+        .select("email, created_at")
+        .gte("created_at", since);
+      for (const r of rows) {
+        r.recovered = ((orders ?? []) as any[]).some(
+          (o) => String(o.email ?? "").toLowerCase() === String(r.email).toLowerCase() && o.created_at >= r.created_at,
+        );
+      }
+    }
+    return rows;
+  });
