@@ -31,6 +31,9 @@ export interface PublicOrder {
   paymentMethod: "card" | "cash";
   paymentStatus: "paid" | "pending";
   items: PublicOrderItem[];
+  /** Enlace de seguimiento del paquete (si ya se ha enviado). */
+  trackingUrl: string | null;
+  trackingNumber: string | null;
 }
 
 export const getOrderBySession = createServerFn({ method: "GET" })
@@ -41,11 +44,7 @@ export const getOrderBySession = createServerFn({ method: "GET" })
 
     const { data: order, error } = await admin
       .from("orders")
-      .select(
-        "status, created_at, currency, subtotal_cents, shipping_cents, total_cents, " +
-          "delivery_method, payment_method, payment_status, " +
-          "order_items(variant_id, title, quantity, unit_price_cents, attributes)",
-      )
+      .select("*, order_items(variant_id, title, quantity, unit_price_cents, attributes)")
       .eq("stripe_session_id", data.sessionId)
       .maybeSingle();
 
@@ -70,7 +69,13 @@ export const getOrderBySession = createServerFn({ method: "GET" })
       }> | null;
     };
 
+    const { trackingUrl, orderPostalCode, cleanTracking } = await import("@/lib/tracking");
+    const raw = order as any;
+    const tNum = cleanTracking(raw.tracking_number) || null;
+
     return {
+      trackingNumber: tNum,
+      trackingUrl: tNum ? trackingUrl(tNum, orderPostalCode(raw.shipping_address)) : null,
       status: o.status,
       createdAt: o.created_at,
       currency: o.currency ?? "EUR",

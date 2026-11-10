@@ -237,6 +237,9 @@ export interface OrderStatusEmailData {
   items: OrderEmailItem[];
   currency: string;
   totalCents: number;
+  /** Seguimiento del paquete (solo en "enviado"). */
+  trackingNumber?: string | null;
+  trackingUrl?: string | null;
 }
 
 function buildStatusHtml(data: OrderStatusEmailData): string {
@@ -268,6 +271,15 @@ function buildStatusHtml(data: OrderStatusEmailData): string {
   <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1a1a1a;">
     <h1 style="font-size:22px;">${heading}</h1>
     <p style="color:#555;">${data.customerName ? `${escapeHtml(data.customerName)}, ` : ""}${message}</p>
+    ${
+      shipped && data.trackingUrl
+        ? `<div style="margin:20px 0;padding:16px;border:1px solid #eee;border-radius:8px;text-align:center;">
+             <p style="margin:0 0 4px;color:#555;font-size:13px;">Lo lleva <strong>Correos Express</strong>. Nº de seguimiento:</p>
+             <p style="margin:0 0 14px;font-size:16px;font-weight:bold;letter-spacing:1px;">${escapeHtml(data.trackingNumber ?? "")}</p>
+             <a href="${escapeHtml(data.trackingUrl)}" style="display:inline-block;background:#2b211b;color:#fff;text-decoration:none;font-size:13px;letter-spacing:2px;text-transform:uppercase;padding:13px 26px;border-radius:2px;">Seguir mi paquete</a>
+           </div>`
+        : ""
+    }
     <table style="width:100%;border-collapse:collapse;font-size:14px;">
       ${rows}
       <tr><td style="padding:8px 0;font-weight:bold;">Total</td><td style="padding:8px 0;text-align:right;font-weight:bold;">${euros(data.totalCents, data.currency)}</td></tr>

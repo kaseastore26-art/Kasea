@@ -105,6 +105,16 @@ function OrderRow({ stored }: { stored: StoredOrder }) {
               <Store className="h-3.5 w-3.5" strokeWidth={1.5} /> Recogida en tienda
             </p>
           )}
+          {order?.trackingUrl && (
+            <a
+              href={order.trackingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 border border-foreground px-3 py-1.5 text-xs uppercase tracking-[0.14em] hover:bg-foreground hover:text-background"
+            >
+              <Package className="h-3.5 w-3.5" strokeWidth={1.5} /> Seguir mi paquete
+            </a>
+          )}
           {order?.paymentStatus === "pending" && (
             <p className="mt-2 inline-block rounded border border-amber-300 bg-amber-50 px-2 py-1 text-xs text-amber-800">
               Pago pendiente · {formatCents(order.totalCents, order.currency)} en efectivo al recoger

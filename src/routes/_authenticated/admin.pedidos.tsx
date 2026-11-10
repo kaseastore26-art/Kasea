@@ -7,7 +7,8 @@ import { Loader2, ChevronDown, Package, Truck, Store, AlertTriangle, Trash2, Ban
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/lib/shopify";
-import { listOrdersAdmin, updateOrderStatus, deleteOrderAdmin, markOrderPaid, listAbandonedCheckoutsAdmin } from "@/lib/admin-catalog.functions";
+import { listOrdersAdmin, updateOrderStatus, deleteOrderAdmin, markOrderPaid, listAbandonedCheckoutsAdmin, shipOrderWithTracking } from "@/lib/admin-catalog.functions";
+import { trackingUrl, orderPostalCode } from "@/lib/tracking";
 
 export const Route = createFileRoute("/_authenticated/admin/pedidos")({
   component: AdminPedidos,
@@ -208,6 +209,8 @@ function AdminPedidos() {
                             </p>
                           )}
                         </div>
+
+                        {o.delivery_method !== "pickup" && <TrackingBox order={o} />}
 
                         {/* Pago: método + estado, con botón para registrar el cobro en efectivo. */}
                         <div className="mt-4">
@@ -418,6 +421,65 @@ function AbandonedCheckouts() {
             </ul>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+
+// Nº de seguimiento (la "Expedición agencia" de Loginser / Correos Express).
+function TrackingBox({ order }: { order: any }) {
+  const qc = useQueryClient();
+  const shipFn = useServerFn(shipOrderWithTracking);
+  const [value, setValue] = useState<string>(order.tracking_number ?? "");
+  const [busy, setBusy] = useState(false);
+  const saved = order.tracking_number as string | null;
+  const link = trackingUrl(saved, orderPostalCode(order.shipping_address));
+
+  async function send() {
+    const t = value.replace(/\s+/g, "");
+    if (t.length < 4) {
+      toast.error("Pega el número de seguimiento (Expedición agencia).");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await shipFn({ data: { id: order.id, tracking: t } });
+      await qc.invalidateQueries({ queryKey: ["admin-orders"] });
+      toast.success(res.emailed ? "Enviado: el cliente ya tiene su seguimiento" : "Seguimiento guardado");
+    } catch (e) {
+      toast.error("No se pudo guardar", { description: e instanceof Error ? e.message : undefined });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4">
+      <label htmlFor={`trk-${order.id}`} className="text-xs text-muted-foreground">
+        Nº de seguimiento (Expedición agencia de Loginser)
+      </label>
+      <div className="mt-1 flex gap-2">
+        <input
+          id={`trk-${order.id}`}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="3230003544635141"
+          inputMode="numeric"
+          className="block w-full min-w-0 rounded-md border border-input bg-background px-3 py-2 text-sm tabular-nums"
+        />
+        <Button size="sm" onClick={send} disabled={busy} className="shrink-0 gap-2">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+          {saved ? "Reenviar" : "Enviar al cliente"}
+        </Button>
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Marca el pedido como “Enviado” y le manda al cliente un correo con el botón “Seguir mi paquete”.
+      </p>
+      {link && (
+        <a href={link} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs underline">
+          Ver seguimiento
+        </a>
       )}
     </div>
   );

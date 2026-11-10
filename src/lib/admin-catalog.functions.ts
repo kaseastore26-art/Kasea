@@ -235,15 +235,14 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     // Leemos el estado anterior + datos del pedido (para el correo al cliente).
     const { data: order, error: readErr } = await (ctx.supabase as any)
       .from("orders")
-      .select(
-        "email, customer_name, currency, total_cents, status, " +
-          "order_items(title, quantity, unit_price_cents, attributes)",
-      )
+      .select("*, order_items(title, quantity, unit_price_cents, attributes)")
       .eq("id", data.id)
       .maybeSingle();
     if (readErr) throw new Error(readErr.message);
 
     const prevStatus = order?.status;
+    const { trackingUrl, orderPostalCode } = await import("@/lib/tracking");
+    const tUrl = trackingUrl(order?.tracking_number, orderPostalCode(order?.shipping_address));
     const { error } = await (ctx.supabase as any)
       .from("orders")
       .update({ status: data.status })
@@ -270,6 +269,8 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
             unit_price_cents: it.unit_price_cents ?? 0,
             attributes: Array.isArray(it.attributes) ? it.attributes : [],
           })),
+          trackingNumber: order.tracking_number ?? null,
+          trackingUrl: data.status === "fulfilled" ? tUrl : null,
         });
       } catch {
         /* el correo no debe bloquear el cambio de estado */
@@ -277,6 +278,59 @@ export const updateOrderStatus = createServerFn({ method: "POST" })
     }
 
     return { ok: true };
+  });
+
+// -------- Guardar el nº de seguimiento, marcar "Enviado" y avisar al cliente --------
+export const shipOrderWithTracking = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ id: z.string().uuid(), tracking: z.string().trim().min(4).max(60) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const ctx = context as unknown as AuthedContext;
+    await assertAdmin(ctx);
+    const { cleanTracking, trackingUrl, orderPostalCode } = await import("@/lib/tracking");
+    const tracking = cleanTracking(data.tracking);
+
+    const { data: order, error: readErr } = await (ctx.supabase as any)
+      .from("orders")
+      .select("*, order_items(title, quantity, unit_price_cents, attributes)")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (readErr) throw new Error(readErr.message);
+    if (!order) throw new Error("Pedido no encontrado");
+
+    const { error } = await (ctx.supabase as any)
+      .from("orders")
+      .update({ tracking_number: tracking, status: "fulfilled" })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+
+    let emailed = false;
+    if (order.email) {
+      try {
+        const { sendOrderStatusEmail } = await import("@/lib/email");
+        await sendOrderStatusEmail({
+          to: order.email as string,
+          customerName: (order.customer_name as string | null) ?? null,
+          status: "fulfilled",
+          currency: (order.currency as string) || "EUR",
+          totalCents: (order.total_cents as number) ?? 0,
+          items: ((order.order_items ?? []) as any[]).map((it) => ({
+            title: it.title,
+            quantity: it.quantity,
+            unit_price_cents: it.unit_price_cents ?? 0,
+            attributes: Array.isArray(it.attributes) ? it.attributes : [],
+          })),
+          trackingNumber: tracking,
+          trackingUrl: trackingUrl(tracking, orderPostalCode(order.shipping_address)),
+        });
+        emailed = true;
+      } catch {
+        /* sin correo: el seguimiento queda guardado igualmente */
+      }
+    }
+    return { ok: true, emailed };
   });
 
 // -------- Marcar un pedido en efectivo como COBRADO --------
