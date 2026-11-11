@@ -51,6 +51,7 @@ import { Route as AuthenticatedAdminContenidoRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminCategoriasRouteImport } from './routes/_authenticated/admin.categorias'
 import { Route as AuthenticatedAdminCarruselRouteImport } from './routes/_authenticated/admin.carrusel'
 import { Route as AuthenticatedAdminAjustesRouteImport } from './routes/_authenticated/admin.ajustes'
+import { Route as AuthenticatedAdminAMediasRouteImport } from './routes/_authenticated/admin.a-medias'
 
 const TiendaRoute = TiendaRouteImport.update({
   id: '/tienda',
@@ -273,6 +274,12 @@ const AuthenticatedAdminAjustesRoute =
     path: '/ajustes',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminAMediasRoute =
+  AuthenticatedAdminAMediasRouteImport.update({
+    id: '/a-medias',
+    path: '/a-medias',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -305,6 +312,7 @@ export interface FileRoutesByFullPath {
   '/recuperar/baja': typeof RecuperarBajaRoute
   '/checkout/': typeof CheckoutIndexRoute
   '/fundas-personalizadas/': typeof FundasPersonalizadasIndexRoute
+  '/admin/a-medias': typeof AuthenticatedAdminAMediasRoute
   '/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
   '/admin/carrusel': typeof AuthenticatedAdminCarruselRoute
   '/admin/categorias': typeof AuthenticatedAdminCategoriasRoute
@@ -347,6 +355,7 @@ export interface FileRoutesByTo {
   '/recuperar/baja': typeof RecuperarBajaRoute
   '/checkout': typeof CheckoutIndexRoute
   '/fundas-personalizadas': typeof FundasPersonalizadasIndexRoute
+  '/admin/a-medias': typeof AuthenticatedAdminAMediasRoute
   '/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
   '/admin/carrusel': typeof AuthenticatedAdminCarruselRoute
   '/admin/categorias': typeof AuthenticatedAdminCategoriasRoute
@@ -392,6 +401,7 @@ export interface FileRoutesById {
   '/recuperar/baja': typeof RecuperarBajaRoute
   '/checkout/': typeof CheckoutIndexRoute
   '/fundas-personalizadas/': typeof FundasPersonalizadasIndexRoute
+  '/_authenticated/admin/a-medias': typeof AuthenticatedAdminAMediasRoute
   '/_authenticated/admin/ajustes': typeof AuthenticatedAdminAjustesRoute
   '/_authenticated/admin/carrusel': typeof AuthenticatedAdminCarruselRoute
   '/_authenticated/admin/categorias': typeof AuthenticatedAdminCategoriasRoute
@@ -437,6 +447,7 @@ export interface FileRouteTypes {
     | '/recuperar/baja'
     | '/checkout/'
     | '/fundas-personalizadas/'
+    | '/admin/a-medias'
     | '/admin/ajustes'
     | '/admin/carrusel'
     | '/admin/categorias'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/recuperar/baja'
     | '/checkout'
     | '/fundas-personalizadas'
+    | '/admin/a-medias'
     | '/admin/ajustes'
     | '/admin/carrusel'
     | '/admin/categorias'
@@ -523,6 +535,7 @@ export interface FileRouteTypes {
     | '/recuperar/baja'
     | '/checkout/'
     | '/fundas-personalizadas/'
+    | '/_authenticated/admin/a-medias'
     | '/_authenticated/admin/ajustes'
     | '/_authenticated/admin/carrusel'
     | '/_authenticated/admin/categorias'
@@ -861,10 +874,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminAjustesRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/a-medias': {
+      id: '/_authenticated/admin/a-medias'
+      path: '/a-medias'
+      fullPath: '/admin/a-medias'
+      preLoaderRoute: typeof AuthenticatedAdminAMediasRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminAMediasRoute: typeof AuthenticatedAdminAMediasRoute
   AuthenticatedAdminAjustesRoute: typeof AuthenticatedAdminAjustesRoute
   AuthenticatedAdminCarruselRoute: typeof AuthenticatedAdminCarruselRoute
   AuthenticatedAdminCategoriasRoute: typeof AuthenticatedAdminCategoriasRoute
@@ -879,6 +900,7 @@ interface AuthenticatedAdminRouteChildren {
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminAMediasRoute: AuthenticatedAdminAMediasRoute,
   AuthenticatedAdminAjustesRoute: AuthenticatedAdminAjustesRoute,
   AuthenticatedAdminCarruselRoute: AuthenticatedAdminCarruselRoute,
   AuthenticatedAdminCategoriasRoute: AuthenticatedAdminCategoriasRoute,
