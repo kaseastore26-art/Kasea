@@ -568,6 +568,8 @@ export const listAbandonedCheckoutsAdmin = createServerFn({ method: "GET" })
           total_cents: items.reduce((n, it) => n + it.unit_price_cents * it.quantity, 0),
           created_at: new Date(Number(s.created) * 1000).toISOString(),
           recovered: false,
+          // Desde el 10/11/2026 22:45 el recordatorio se manda solo a las 2 h.
+          autoReminded: Number(s.created) * 1000 >= Date.UTC(2026, 10, 10, 21, 45),
         };
       }),
     );
@@ -586,4 +588,72 @@ export const listAbandonedCheckoutsAdmin = createServerFn({ method: "GET" })
       }
     }
     return rows.filter((r) => r.items.length > 0);
+  });
+
+// -------- Mandar a mano el recordatorio de un pago a medias --------
+export const sendCartReminderAdmin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ sessionId: z.string().regex(/^cs_[A-Za-z0-9_]+$/) }).parse(d))
+  .handler(async ({ data, context }): Promise<{ ok: true } | { error: string }> => {
+    const ctx = context as unknown as AuthedContext;
+    await assertAdmin(ctx);
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) return { error: "Stripe no está configurado." };
+    const get = async (path: string) =>
+      (await fetch(`https://api.stripe.com${path}`, { headers: { Authorization: `Bearer ${key}` } })).json();
+
+    const session = await get(`/v1/checkout/sessions/${data.sessionId}`);
+    if (!session?.id) return { error: "No se encontró ese pago en Stripe." };
+    if (session.status === "complete") return { error: "Ese pago ya está completado." };
+    const metadata = session.metadata ?? {};
+    const email = String(metadata.customer_email ?? session.customer_email ?? "").trim();
+    if (!email) return { error: "Ese pago no tiene correo." };
+
+    const { normalizeEmail, signEmail, siteUrl } = await import("@/lib/cart-reminder.server");
+    const norm = normalizeEmail(email);
+    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+    const { data: optout } = await (admin as any)
+      .from("cart_reminder_optouts")
+      .select("email")
+      .eq("email", norm)
+      .maybeSingle();
+    if (optout) return { error: "Este cliente pidió no recibir avisos." };
+
+    const li = await get(`/v1/checkout/sessions/${data.sessionId}/line_items?expand[]=data.price.product&limit=100`);
+    const items = ((li?.data ?? []) as any[])
+      .filter((row) => row?.price?.product?.metadata?.variant_id)
+      .map((row) => {
+        const product = row.price.product;
+        let model: string | null = null;
+        try {
+          const attrs = product?.metadata?.attrs ? JSON.parse(product.metadata.attrs) : [];
+          model = (attrs as any[]).find((a) => a?.key === "Modelo")?.value ?? null;
+        } catch {
+          /* sin atributos */
+        }
+        return {
+          title: String(product?.name ?? "Funda").replace(/\s*·\s*2\.ª funda.*$/, ""),
+          quantity: Number(row?.quantity ?? 1),
+          unit_price_cents: Number(row?.price?.unit_amount ?? 0),
+          imageUrl: (product?.images ?? [])[0] ?? null,
+          model,
+        };
+      });
+    if (!items.length) return { error: "Ese pago no tiene productos." };
+
+    const { sendCartReminderEmail } = await import("@/lib/email");
+    const base = siteUrl();
+    try {
+      await sendCartReminderEmail({
+        to: email,
+        customerName: metadata.customer_name ?? null,
+        items,
+        currency: String(session.currency ?? "eur").toUpperCase(),
+        recoverUrl: `${base}/recuperar/${encodeURIComponent(session.id)}`,
+        unsubscribeUrl: `${base}/recuperar/baja?e=${encodeURIComponent(norm)}&k=${await signEmail(norm)}`,
+      });
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : "No se pudo enviar el correo." };
+    }
+    return { ok: true };
   });

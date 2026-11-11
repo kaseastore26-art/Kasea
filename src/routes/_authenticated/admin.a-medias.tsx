@@ -3,8 +3,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { listAbandonedCheckoutsAdmin } from "@/lib/admin-catalog.functions";
+import { useState } from "react";
+import { Loader2, Mail, Check } from "lucide-react";
+import { toast } from "sonner";
+import { listAbandonedCheckoutsAdmin, sendCartReminderAdmin } from "@/lib/admin-catalog.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/a-medias")({
   component: AdminAMedias,
@@ -17,6 +19,26 @@ function AdminAMedias() {
   const listFn = useServerFn(listAbandonedCheckoutsAdmin);
   const { data: rows = [], isLoading } = useQuery({ queryKey: ["admin", "abandoned"], queryFn: () => listFn() });
   const pending = (rows as any[]).filter((r) => !r.recovered).length;
+  const sendFn = useServerFn(sendCartReminderAdmin);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [sent, setSent] = useState<Record<string, boolean>>({});
+
+  async function send(r: any) {
+    if (!confirm(`¿Mandar el recordatorio a ${r.customer_name || r.email}?`)) return;
+    setBusy(r.id);
+    try {
+      const res = await sendFn({ data: { sessionId: r.stripe_session_id } });
+      if ("error" in res) toast.error(res.error);
+      else {
+        setSent((m) => ({ ...m, [r.id]: true }));
+        toast.success("Recordatorio enviado");
+      }
+    } catch {
+      toast.error("No se pudo enviar");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   return (
     <div>
@@ -64,7 +86,7 @@ function AdminAMedias() {
                     .join(", ")}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="flex flex-col items-end gap-1 text-right">
                 <p className="font-medium tabular-nums">{eur(r.total_cents)}</p>
                 <p className="text-xs text-muted-foreground">
                   {new Date(r.created_at).toLocaleString("es-ES", {
@@ -74,6 +96,28 @@ function AdminAMedias() {
                     minute: "2-digit",
                   })}
                 </p>
+                {!r.recovered && r.autoReminded && (
+                  <span className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Check className="h-3.5 w-3.5" /> Recordatorio automático enviado
+                  </span>
+                )}
+                {!r.recovered &&
+                  !r.autoReminded &&
+                  (sent[r.id] ? (
+                    <span className="mt-1 inline-flex items-center gap-1 text-xs text-green-700">
+                      <Check className="h-3.5 w-3.5" /> Enviado
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => send(r)}
+                      disabled={busy === r.id}
+                      className="mt-1 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs hover:bg-secondary disabled:opacity-50"
+                    >
+                      {busy === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                      Enviar recordatorio
+                    </button>
+                  ))}
               </div>
             </li>
           ))}
