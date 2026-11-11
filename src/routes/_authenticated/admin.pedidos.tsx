@@ -384,7 +384,7 @@ function AbandonedCheckouts() {
         <div className="border-t px-4 py-3">
           {rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Nadie ha dejado un pago a medias en los últimos 60 días. Cuando pase, aparecerá aquí y se le enviará un
+              Nadie ha dejado un pago a medias en los últimos 30 días. Cuando pase, aparecerá aquí y se le enviará un
               recordatorio automático.
             </p>
           ) : (

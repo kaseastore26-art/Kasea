@@ -516,34 +516,74 @@ export const updateProductImageUrl = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// -------- Pedidos a medias (recordatorio enviado) --------
+// -------- Pedidos a medias: se leen directamente de Stripe --------
+// Pagos que caducaron sin pagarse en los últimos 30 días (con correo del cliente).
 export const listAbandonedCheckoutsAdmin = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const ctx = context as unknown as AuthedContext;
     await assertAdmin(ctx);
-    const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-    const since = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-    const { data, error } = await (admin as any)
-      .from("abandoned_checkouts")
-      .select("*")
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(100);
-    if (error) return [];
-    const rows = (data ?? []) as any[];
-    // ¿Compró después? (pedido con el mismo correo tras el aviso)
-    const emails = [...new Set(rows.map((r) => String(r.email).toLowerCase()))];
-    if (emails.length) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) return [];
+    const get = async (path: string) =>
+      (await fetch(`https://api.stripe.com${path}`, { headers: { Authorization: `Bearer ${key}` } })).json();
+
+    const sinceSec = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
+    const list = await get(`/v1/checkout/sessions?status=expired&limit=50&created[gte]=${sinceSec}`);
+    const sessions = ((list?.data ?? []) as any[]).filter((s) => s?.metadata?.customer_email);
+
+    const rows = await Promise.all(
+      sessions.map(async (s) => {
+        let items: Array<{ title: string; quantity: number; unit_price_cents: number; model: string | null }> = [];
+        try {
+          const li = await get(`/v1/checkout/sessions/${s.id}/line_items?expand[]=data.price.product&limit=100`);
+          items = ((li?.data ?? []) as any[])
+            .filter((row) => row?.price?.product?.metadata?.variant_id)
+            .map((row) => {
+              const product = row.price.product;
+              let model: string | null = null;
+              try {
+                const attrs = product?.metadata?.attrs ? JSON.parse(product.metadata.attrs) : [];
+                model = (attrs as any[]).find((a) => a?.key === "Modelo")?.value ?? null;
+              } catch {
+                /* sin atributos */
+              }
+              return {
+                title: String(product?.name ?? "Funda"),
+                quantity: Number(row?.quantity ?? 1),
+                unit_price_cents: Number(row?.price?.unit_amount ?? 0),
+                model,
+              };
+            });
+        } catch {
+          /* sin líneas */
+        }
+        return {
+          id: s.id as string,
+          stripe_session_id: s.id as string,
+          email: String(s.metadata.customer_email),
+          customer_name: (s.metadata.customer_name as string) || null,
+          phone: (s.metadata.customer_phone as string) || null,
+          items,
+          total_cents: items.reduce((n, it) => n + it.unit_price_cents * it.quantity, 0),
+          created_at: new Date(Number(s.created) * 1000).toISOString(),
+          recovered: false,
+        };
+      }),
+    );
+
+    // ¿Compró después? (pedido con el mismo correo tras empezar ese pago)
+    if (rows.length) {
+      const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
       const { data: orders } = await (admin as any)
         .from("orders")
         .select("email, created_at")
-        .gte("created_at", since);
+        .gte("created_at", new Date(sinceSec * 1000).toISOString());
       for (const r of rows) {
         r.recovered = ((orders ?? []) as any[]).some(
-          (o) => String(o.email ?? "").toLowerCase() === String(r.email).toLowerCase() && o.created_at >= r.created_at,
+          (o) => String(o.email ?? "").toLowerCase() === r.email.toLowerCase() && o.created_at >= r.created_at,
         );
       }
     }
-    return rows;
+    return rows.filter((r) => r.items.length > 0);
   });

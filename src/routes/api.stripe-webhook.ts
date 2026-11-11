@@ -152,7 +152,7 @@ async function handleExpiredSession(event: any, stripeKey: string): Promise<Resp
     });
 
     // Guardar para el panel (Admin → Pedidos → "Pedidos a medias"). Sin correos.
-    await (admin as any).from("abandoned_checkouts").upsert(
+    const { error: saveErr } = await (admin as any).from("abandoned_checkouts").upsert(
       {
         stripe_session_id: session.id,
         email,
@@ -164,6 +164,7 @@ async function handleExpiredSession(event: any, stripeKey: string): Promise<Resp
       },
       { onConflict: "stripe_session_id", ignoreDuplicates: true },
     );
+    if (saveErr) console.error("[webhook] no se pudo guardar el pedido a medias:", saveErr.message);
     return new Response("ok (recordatorio enviado)", { status: 200 });
   } catch (err) {
     console.error("[webhook] recordatorio de pedido a medias:", err);
