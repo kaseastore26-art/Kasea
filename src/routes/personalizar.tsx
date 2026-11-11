@@ -118,7 +118,7 @@ const CAM_PAD = 0.8;
 // Distancia (mm) a la que la foto se "imanta" al centro de la funda al arrastrarla
 const SNAP_MM = 1.2;
 
-function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) {
+function CaseOverlay({ model, hasImage, fill }: { model: string; hasImage: boolean; fill?: string }) {
   const rawId = useId();
   const maskId = `case-mask-${rawId.replace(/[^a-zA-Z0-9]/g, "")}`;
   const stage = templateSizeMm(templateForModel(model));
@@ -165,7 +165,7 @@ function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) 
         y="0"
         width={stage.w}
         height={stage.h}
-        fill={hasImage ? "rgba(250,247,241,0.66)" : "transparent"}
+        fill={hasImage || fill ? "rgba(250,247,241,0.66)" : "transparent"}
         mask={`url(#${maskId})`}
       />
       <rect
@@ -182,7 +182,7 @@ function CaseOverlay({ model, hasImage }: { model: string; hasImage: boolean }) 
 
       {/* Funda */}
       <g transform={`translate(${x0} ${y0})`}>
-        {!hasImage && <rect x="0" y="0" width={c.w} height={c.h} rx={c.r} ry={c.r} fill="#ffffff" />}
+        {!hasImage && <rect x="0" y="0" width={c.w} height={c.h} rx={c.r} ry={c.r} fill={fill ?? "#ffffff"} />}
         <rect x="0" y="0" width={c.w} height={c.h} rx={c.r} ry={c.r} fill={`url(#${maskId}-shine)`} />
         <rect
           x="0"
@@ -977,7 +977,8 @@ function PersonalizarPage() {
                 />
               ))}
 
-              <CaseOverlay model={model} hasImage={hasPhotos} />
+              {/* En collage, la funda vacía ya se ve del color de fondo elegido. */}
+              <CaseOverlay model={model} hasImage={hasPhotos} fill={multi ? background : undefined} />
 
               {/* Guías de centro de la funda */}
               {guides.v && (
@@ -1015,10 +1016,12 @@ function PersonalizarPage() {
                   onClick={() => addRef.current?.click()}
                   className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2 text-espresso"
                 >
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-espresso text-ivory shadow-lg transition-transform hover:scale-105">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-espresso text-ivory shadow-lg ring-2 ring-ivory/80 transition-transform hover:scale-105">
                     <ImagePlus className="h-6 w-6" strokeWidth={1.5} />
                   </span>
-                  <span className="text-xs font-medium uppercase tracking-[0.14em]">Sube tu foto</span>
+                  <span className="rounded-full bg-ivory/90 px-2.5 py-1 text-xs font-medium uppercase tracking-[0.14em]">
+                    Sube tu foto
+                  </span>
                 </button>
               )}
 
