@@ -499,11 +499,10 @@ export async function renderPrintFileLayers(
   const x0 = Math.round((W - tpl.widthPx) / 2);
   const y0 = Math.round((H - tpl.heightPx) / 2);
 
-  // Fondo del collage: la plantilla más un margen extra (1 cm arriba y abajo,
-  // 0,5 cm a los lados). Así sobra color para los bordes de la funda, que en
+  // Fondo del collage: la plantilla más un margen extra de 1 cm por cada lado. Así sobra color para los bordes de la funda, que en
   // sublimación 3D se estiran, sin gastar tinta en toda la hoja.
   const extraY = Math.round(10 * PX_PER_MM);
-  const extraX = Math.round(5 * PX_PER_MM);
+  const extraX = Math.round(10 * PX_PER_MM);
   ctx.fillStyle = opts.background || "#ffffff";
   ctx.fillRect(x0 - extraX, y0 - extraY, tpl.widthPx + extraX * 2, tpl.heightPx + extraY * 2);
   ctx.save();
@@ -515,10 +514,50 @@ export async function renderPrintFileLayers(
   );
   ctx.restore();
   bitmaps.forEach((b) => b.close());
+  drawCenterMarks(ctx, W, H, x0 - extraX, y0 - extraY, x0 + tpl.widthPx + extraX, y0 + tpl.heightPx + extraY);
 
   const blob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo generar el PNG"))), "image/png"),
   );
   const bytes = setPngDpi(new Uint8Array(await blob.arrayBuffer()), 300);
   return new Blob([bytes], { type: "image/png" });
+}
+
+// Marcas de centrado (fuera de la zona impresa): una rayita en el centro de cada
+// lado de la parte trasera, para colocar la funda centrada en la máquina.
+function drawCenterMarks(
+  ctx: CanvasRenderingContext2D,
+  W: number,
+  H: number,
+  left: number,
+  top: number,
+  right: number,
+  bottom: number,
+) {
+  const gap = Math.round(2 * PX_PER_MM);
+  const len = Math.round(6 * PX_PER_MM);
+  const cx = Math.round((left + right) / 2);
+  const cy = Math.round((top + bottom) / 2);
+  ctx.save();
+  ctx.strokeStyle = "#9a9a9a";
+  ctx.lineWidth = Math.max(2, Math.round(0.3 * PX_PER_MM));
+  ctx.beginPath();
+  if (top - gap - len > 0) {
+    ctx.moveTo(cx, top - gap);
+    ctx.lineTo(cx, top - gap - len);
+  }
+  if (bottom + gap + len < H) {
+    ctx.moveTo(cx, bottom + gap);
+    ctx.lineTo(cx, bottom + gap + len);
+  }
+  if (left - gap - len > 0) {
+    ctx.moveTo(left - gap, cy);
+    ctx.lineTo(left - gap - len, cy);
+  }
+  if (right + gap + len < W) {
+    ctx.moveTo(right + gap, cy);
+    ctx.lineTo(right + gap + len, cy);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
