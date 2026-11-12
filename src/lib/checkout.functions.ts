@@ -17,6 +17,35 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 import { sendOrderConfirmationEmail } from "@/lib/email";
+import { getRequest } from "@tanstack/react-start/server";
+
+// Datos para que Meta reconozca al comprador (Conversions API): IP, navegador
+// y las cookies _fbp/_fbc del píxel. Se guardan en la metadata de Stripe.
+async function metaTrackingMetadata(): Promise<Record<string, string>> {
+  try {
+    const req = getRequest();
+    const h = req.headers;
+    const cookies = Object.fromEntries(
+      (h.get("cookie") ?? "")
+        .split(";")
+        .map((c) => c.trim().split("="))
+        .filter((kv) => kv.length >= 2)
+        .map(([k, ...v]) => [k, decodeURIComponent(v.join("="))]),
+    ) as Record<string, string>;
+    const ip = (h.get("cf-connecting-ip") || h.get("x-forwarded-for") || h.get("x-real-ip") || "")
+      .split(",")[0]
+      .trim();
+    const out: Record<string, string> = {};
+    if (ip) out.client_ip = ip.slice(0, 100);
+    const ua = h.get("user-agent");
+    if (ua) out.client_ua = ua.slice(0, 480);
+    if (cookies._fbp) out.fbp = cookies._fbp.slice(0, 200);
+    if (cookies._fbc) out.fbc = cookies._fbc.slice(0, 480);
+    return out;
+  } catch {
+    return {};
+  }
+}
 import {
   DEFAULT_SHIPPING_SETTINGS,
   HOME_DELIVERY_LABEL,
@@ -341,6 +370,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
             }
           : {}),
         ...(promoCents > 0 ? { promo_cents: String(promoCents) } : {}),
+        ...(await metaTrackingMetadata()),
       },
       // La página de pago caduca a las 2 h si no se paga: entonces se manda un
       // único recordatorio de "pedido a medias" (ver api.stripe-webhook).

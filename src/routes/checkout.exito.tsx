@@ -92,13 +92,19 @@ function CheckoutSuccessPage() {
 
   if (items.length === 0) return;
 
-  fbq("track", "Purchase", {
-    content_ids: items.map((item) => item.id),
-    content_type: "product",
-    contents: items,
-    value: order.totalCents / 100,
-    currency: order.currency,
-  });
+  // Mismo eventID que manda el servidor (Conversions API) → Meta no la cuenta dos veces.
+  fbq(
+    "track",
+    "Purchase",
+    {
+      content_ids: items.map((item) => item.id),
+      content_type: "product",
+      contents: items,
+      value: order.totalCents / 100,
+      currency: order.currency,
+    },
+    session_id ? { eventID: String(session_id) } : undefined,
+  );
 
   purchaseSent.current = true;
 }, [order, session_id]);

@@ -340,8 +340,36 @@ const orderAddress =
           await redeemDiscountCode(discountCode, session.id);
         }
 
-        // Correos (solo la primera vez, no en reintentos de Stripe).
+        // Correos y aviso a Meta (solo la primera vez, no en reintentos de Stripe).
         if (!alreadyProcessed) {
+          // 0) Meta Conversions API: la compra, desde el servidor.
+          try {
+            const { sendMetaPurchase } = await import("@/lib/meta-capi.server");
+            const { siteUrl } = await import("@/lib/cart-reminder.server");
+            await sendMetaPurchase({
+              eventId: String(session.id),
+              eventTimeSec: Math.floor(Date.now() / 1000),
+              email: customerEmail,
+              phone: customerPhone,
+              fullName: customerName,
+              city: metadata.shipping_city ?? null,
+              postalCode: metadata.shipping_postal_code ?? metadata.nacex_postal_code ?? null,
+              country: metadata.shipping_country ?? "ES",
+              clientIp: metadata.client_ip ?? null,
+              userAgent: metadata.client_ua ?? null,
+              fbp: metadata.fbp ?? null,
+              fbc: metadata.fbc ?? null,
+              valueCents: totalCents,
+              currency,
+              contents: items
+                .filter((i: any) => i.variant_id)
+                .map((i: any) => ({ id: String(i.variant_id), quantity: i.quantity, item_price: i.unit_price_cents / 100 })),
+              sourceUrl: `${siteUrl()}/checkout/exito`,
+            });
+          } catch {
+            /* nunca bloquea el pedido */
+          }
+
           // 1) Confirmación al cliente.
           if (customerEmail) {
         await sendOrderConfirmationEmail({
